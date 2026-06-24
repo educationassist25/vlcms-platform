@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "https://vlcms-platform-v3.onrender.com/api/:path*",
+        destination: "https://vlcms-platform.onrender.com/api/:path*",
       },
     ];
   },
