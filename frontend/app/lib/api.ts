@@ -1,5 +1,4 @@
 const BASE = "https://vlcms-platform.onrender.com/api/v1";
-
 async function req<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
