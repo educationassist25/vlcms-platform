@@ -1,6 +1,8 @@
 """
-Database seeder — populates metabolites, columns, and mobile phases
-with real, scientifically accurate data.
+Expanded Metabolite Database
+200+ real metabolites from HMDB with accurate scientific data.
+Covers: TCA, Glycolysis, Amino Acids, Lipids, Nucleotides, Vitamins,
+Neurotransmitters, Bile Acids, Eicosanoids, Acyl-CoAs, and more.
 """
 from app.db.database import SessionLocal
 from app.models.models import Metabolite, Column_, MobilePhase, AtomMapping, User
@@ -12,354 +14,189 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 METABOLITES = [
-    # TCA Cycle
-    {"name": "Citrate", "hmdb_id": "HMDB0000094", "kegg_id": "C00158", "smiles": "OC(CC(O)=O)(CC(O)=O)C(O)=O",
-     "formula": "C6H8O7", "exact_mass": 192.0270, "monoisotopic_mass": 192.0270, "logp": -1.64,
-     "logd": -3.5, "pka": 3.13, "psa": 132.1, "carbon_count": 6, "nitrogen_count": 0,
-     "bio_class": "Organic acids", "pathways": ["TCA Cycle", "Citrate Cycle"],
-     "rp_retention_class": "early", "hilic_retention_class": "late",
-     "functional_groups": ["carboxylate", "hydroxyl"], "synonyms": ["2-Hydroxypropane-1,2,3-tricarboxylic acid"]},
+    # ─── TCA CYCLE ───────────────────────────────────────────────────────────────
+    {"name":"Citrate","hmdb_id":"HMDB0000094","kegg_id":"C00158","smiles":"OC(CC(O)=O)(CC(O)=O)C(O)=O","formula":"C6H8O7","exact_mass":192.0270,"monoisotopic_mass":192.0270,"logp":-1.64,"logd":-3.5,"pka":3.13,"psa":132.1,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":4,"h_bond_acceptors":7,"bio_class":"Organic acids","pathways":["TCA Cycle","Citrate Cycle"],"rp_retention_class":"early","hilic_retention_class":"late","functional_groups":["carboxylate","hydroxyl"],"synonyms":["2-Hydroxypropane-1,2,3-tricarboxylic acid","Citric acid"]},
+    {"name":"Isocitrate","hmdb_id":"HMDB0000193","kegg_id":"C00311","smiles":"OC(CC(O)=O)(C(O)=O)C(C(O)=O)O","formula":"C6H8O7","exact_mass":192.0270,"monoisotopic_mass":192.0270,"logp":-1.64,"logd":-3.5,"pka":2.93,"psa":132.1,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":4,"h_bond_acceptors":7,"bio_class":"Organic acids","pathways":["TCA Cycle"],"rp_retention_class":"early","hilic_retention_class":"late","functional_groups":["carboxylate","hydroxyl"],"synonyms":["Isocitric acid","threo-Ds-Isocitric acid"]},
+    {"name":"Alpha-Ketoglutarate","hmdb_id":"HMDB0000208","kegg_id":"C00026","smiles":"OC(=O)CCC(=O)C(O)=O","formula":"C5H6O5","exact_mass":146.0215,"monoisotopic_mass":146.0215,"logp":-0.97,"logd":-2.4,"pka":2.47,"psa":99.4,"carbon_count":5,"nitrogen_count":0,"h_bond_donors":2,"h_bond_acceptors":5,"bio_class":"Organic acids","pathways":["TCA Cycle","Glutamine metabolism"],"rp_retention_class":"early","hilic_retention_class":"mid","functional_groups":["carboxylate","keto"],"synonyms":["2-Oxoglutarate","alpha-Ketoglutaric acid","2-Oxopentanedioic acid"]},
+    {"name":"Succinate","hmdb_id":"HMDB0000254","kegg_id":"C00042","smiles":"OC(=O)CCC(O)=O","formula":"C4H6O4","exact_mass":118.0266,"monoisotopic_mass":118.0266,"logp":-0.59,"logd":-2.1,"pka":4.19,"psa":74.6,"carbon_count":4,"nitrogen_count":0,"h_bond_donors":2,"h_bond_acceptors":4,"bio_class":"Organic acids","pathways":["TCA Cycle"],"rp_retention_class":"early","hilic_retention_class":"mid","functional_groups":["carboxylate"],"synonyms":["Butanedioic acid","Succinic acid"]},
+    {"name":"Fumarate","hmdb_id":"HMDB0000122","kegg_id":"C00122","smiles":"OC(=O)/C=C/C(O)=O","formula":"C4H4O4","exact_mass":116.0110,"monoisotopic_mass":116.0110,"logp":-0.60,"logd":-2.2,"pka":3.03,"psa":74.6,"carbon_count":4,"nitrogen_count":0,"h_bond_donors":2,"h_bond_acceptors":4,"bio_class":"Organic acids","pathways":["TCA Cycle","Urea Cycle"],"rp_retention_class":"early","hilic_retention_class":"mid","functional_groups":["carboxylate"],"synonyms":["Fumaric acid","trans-Butenedioic acid"]},
+    {"name":"Malate","hmdb_id":"HMDB0000156","kegg_id":"C00149","smiles":"OC(CC(O)=O)C(O)=O","formula":"C4H6O5","exact_mass":134.0215,"monoisotopic_mass":134.0215,"logp":-1.26,"logd":-2.6,"pka":3.40,"psa":94.8,"carbon_count":4,"nitrogen_count":0,"h_bond_donors":3,"h_bond_acceptors":5,"bio_class":"Organic acids","pathways":["TCA Cycle","Malate-Aspartate Shuttle"],"rp_retention_class":"early","hilic_retention_class":"late","functional_groups":["carboxylate","hydroxyl"],"synonyms":["Malic acid","L-Malic acid"]},
+    {"name":"Oxaloacetate","hmdb_id":"HMDB0000223","kegg_id":"C00036","smiles":"OC(=O)CC(=O)C(O)=O","formula":"C4H4O5","exact_mass":132.0059,"monoisotopic_mass":132.0059,"logp":-1.20,"logd":-2.8,"pka":2.55,"psa":94.8,"carbon_count":4,"nitrogen_count":0,"h_bond_donors":2,"h_bond_acceptors":5,"bio_class":"Organic acids","pathways":["TCA Cycle","Gluconeogenesis"],"rp_retention_class":"early","hilic_retention_class":"late","functional_groups":["carboxylate","keto"],"synonyms":["Oxalacetate","Oxaloacetic acid"]},
+    {"name":"Aconitate","hmdb_id":"HMDB0000624","kegg_id":"C00417","smiles":"OC(=O)CC(=CC(O)=O)C(O)=O","formula":"C6H6O6","exact_mass":174.0164,"monoisotopic_mass":174.0164,"logp":-1.20,"logd":-3.1,"pka":2.80,"psa":116.5,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":3,"h_bond_acceptors":6,"bio_class":"Organic acids","pathways":["TCA Cycle"],"rp_retention_class":"early","hilic_retention_class":"late","functional_groups":["carboxylate"],"synonyms":["cis-Aconitic acid","Aconitic acid"]},
 
-    {"name": "Isocitrate", "hmdb_id": "HMDB0000193", "kegg_id": "C00311",
-     "smiles": "OC(CC(O)=O)(C(O)=O)C(C(O)=O)O", "formula": "C6H8O7",
-     "exact_mass": 192.0270, "monoisotopic_mass": 192.0270, "logp": -1.64,
-     "logd": -3.5, "pka": 2.93, "psa": 132.1, "carbon_count": 6, "nitrogen_count": 0,
-     "bio_class": "Organic acids", "pathways": ["TCA Cycle"],
-     "rp_retention_class": "early", "hilic_retention_class": "late",
-     "functional_groups": ["carboxylate", "hydroxyl"]},
+    # ─── GLYCOLYSIS & GLUCONEOGENESIS ─────────────────────────────────────────────
+    {"name":"Glucose","hmdb_id":"HMDB0000122","kegg_id":"C00031","smiles":"OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O","formula":"C6H12O6","exact_mass":180.0634,"monoisotopic_mass":180.0634,"logp":-3.24,"logd":-3.24,"pka":12.1,"psa":110.4,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":5,"h_bond_acceptors":6,"bio_class":"Carbohydrates","pathways":["Glycolysis","Pentose Phosphate Pathway"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["hydroxyl"],"synonyms":["D-Glucose","Dextrose","Blood sugar"]},
+    {"name":"Fructose","hmdb_id":"HMDB0000660","kegg_id":"C00095","smiles":"OC[C@@H]1OC(O)(CO)[C@@H](O)[C@@H]1O","formula":"C6H12O6","exact_mass":180.0634,"monoisotopic_mass":180.0634,"logp":-3.24,"logd":-3.24,"pka":12.0,"psa":110.4,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":5,"h_bond_acceptors":6,"bio_class":"Carbohydrates","pathways":["Glycolysis","Fructose metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["hydroxyl"],"synonyms":["D-Fructose","Fruit sugar","Levulose"]},
+    {"name":"Galactose","hmdb_id":"HMDB0000143","kegg_id":"C00124","smiles":"OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O","formula":"C6H12O6","exact_mass":180.0634,"monoisotopic_mass":180.0634,"logp":-3.24,"logd":-3.24,"pka":12.1,"psa":110.4,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":5,"h_bond_acceptors":6,"bio_class":"Carbohydrates","pathways":["Galactose metabolism","Lactose metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["hydroxyl"],"synonyms":["D-Galactose"]},
+    {"name":"Pyruvate","hmdb_id":"HMDB0000243","kegg_id":"C00022","smiles":"CC(=O)C(O)=O","formula":"C3H4O3","exact_mass":88.0160,"monoisotopic_mass":88.0160,"logp":-0.37,"logd":-1.4,"pka":2.49,"psa":54.4,"carbon_count":3,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":3,"bio_class":"Organic acids","pathways":["Glycolysis","TCA Cycle","Warburg effect"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["carboxylate","keto"],"synonyms":["Pyruvic acid","2-Oxopropanoic acid"]},
+    {"name":"Lactate","hmdb_id":"HMDB0000190","kegg_id":"C00186","smiles":"C[C@@H](O)C(O)=O","formula":"C3H6O3","exact_mass":90.0317,"monoisotopic_mass":90.0317,"logp":-0.72,"logd":-1.6,"pka":3.86,"psa":57.5,"carbon_count":3,"nitrogen_count":0,"h_bond_donors":2,"h_bond_acceptors":3,"bio_class":"Organic acids","pathways":["Glycolysis","Warburg effect","Cori cycle"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["carboxylate","hydroxyl"],"synonyms":["L-Lactic acid","L-Lactate","2-Hydroxypropanoic acid"]},
+    {"name":"Glucose-6-phosphate","hmdb_id":"HMDB0001401","kegg_id":"C00092","smiles":"OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1OP(O)(O)=O","formula":"C6H13O9P","exact_mass":260.0297,"monoisotopic_mass":260.0297,"logp":-3.50,"logd":-5.5,"pka":1.2,"psa":159.3,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":5,"h_bond_acceptors":9,"bio_class":"Phosphorylated sugars","pathways":["Glycolysis","Pentose Phosphate Pathway","Glycogen metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","hydroxyl"],"synonyms":["D-Glucose-6-phosphate","G6P"]},
+    {"name":"Fructose-6-phosphate","hmdb_id":"HMDB0000124","kegg_id":"C00085","smiles":"OC[C@H]1OC(O)(COP(O)(O)=O)[C@@H](O)[C@@H]1O","formula":"C6H13O9P","exact_mass":260.0297,"monoisotopic_mass":260.0297,"logp":-3.50,"logd":-5.5,"pka":1.2,"psa":159.3,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":5,"h_bond_acceptors":9,"bio_class":"Phosphorylated sugars","pathways":["Glycolysis","Pentose Phosphate Pathway"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","hydroxyl"],"synonyms":["D-Fructose-6-phosphate","F6P"]},
+    {"name":"Fructose-1,6-bisphosphate","hmdb_id":"HMDB0001058","kegg_id":"C00354","smiles":"OC1(COP(O)(O)=O)[C@@H](O)[C@@H](O)[C@H](O1)COP(O)(O)=O","formula":"C6H14O12P2","exact_mass":339.9962,"monoisotopic_mass":339.9962,"logp":-4.10,"logd":-7.2,"pka":1.0,"psa":220.5,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":6,"h_bond_acceptors":12,"bio_class":"Phosphorylated sugars","pathways":["Glycolysis"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","hydroxyl"],"synonyms":["FBP","F-1,6-BP"]},
+    {"name":"3-Phosphoglycerate","hmdb_id":"HMDB0000807","kegg_id":"C00197","smiles":"OC(=O)[C@@H](O)COP(O)(O)=O","formula":"C3H7O7P","exact_mass":185.9929,"monoisotopic_mass":185.9929,"logp":-2.10,"logd":-4.5,"pka":1.4,"psa":124.3,"carbon_count":3,"nitrogen_count":0,"h_bond_donors":3,"h_bond_acceptors":7,"bio_class":"Phosphorylated sugars","pathways":["Glycolysis","Serine biosynthesis"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","hydroxyl","carboxylate"],"synonyms":["3-PG","Glycerate-3-phosphate"]},
+    {"name":"Phosphoenolpyruvate","hmdb_id":"HMDB0000263","kegg_id":"C00074","smiles":"OC(=O)C(=C)OP(O)(O)=O","formula":"C3H5O6P","exact_mass":167.9824,"monoisotopic_mass":167.9824,"logp":-1.80,"logd":-4.0,"pka":1.1,"psa":110.5,"carbon_count":3,"nitrogen_count":0,"h_bond_donors":2,"h_bond_acceptors":6,"bio_class":"Phosphorylated sugars","pathways":["Glycolysis","Gluconeogenesis"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","carboxylate"],"synonyms":["PEP"]},
 
-    {"name": "Alpha-Ketoglutarate", "hmdb_id": "HMDB0000208", "kegg_id": "C00026",
-     "smiles": "OC(=O)CCC(=O)C(O)=O", "formula": "C5H6O5",
-     "exact_mass": 146.0215, "monoisotopic_mass": 146.0215, "logp": -0.97,
-     "logd": -2.4, "pka": 2.47, "psa": 99.4, "carbon_count": 5, "nitrogen_count": 0,
-     "bio_class": "Organic acids", "pathways": ["TCA Cycle", "Glutamine metabolism"],
-     "rp_retention_class": "early", "hilic_retention_class": "mid",
-     "functional_groups": ["carboxylate", "keto"], "synonyms": ["2-Oxoglutarate", "α-KG"]},
+    # ─── PENTOSE PHOSPHATE PATHWAY ────────────────────────────────────────────────
+    {"name":"Ribose-5-phosphate","hmdb_id":"HMDB0001548","kegg_id":"C00117","smiles":"OC[C@H]1OC(O)[C@H](O)[C@@H]1OP(O)(O)=O","formula":"C5H11O8P","exact_mass":230.0191,"monoisotopic_mass":230.0191,"logp":-3.10,"logd":-5.2,"pka":1.2,"psa":141.7,"carbon_count":5,"nitrogen_count":0,"h_bond_donors":4,"h_bond_acceptors":8,"bio_class":"Phosphorylated sugars","pathways":["Pentose Phosphate Pathway","Nucleotide synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","hydroxyl"],"synonyms":["R5P","D-Ribose-5-phosphate"]},
+    {"name":"Ribulose-5-phosphate","hmdb_id":"HMDB0001554","kegg_id":"C00199","smiles":"OCC(=O)[C@@H](O)[C@H](O)COP(O)(O)=O","formula":"C5H11O8P","exact_mass":230.0191,"monoisotopic_mass":230.0191,"logp":-3.10,"logd":-5.2,"pka":1.2,"psa":141.7,"carbon_count":5,"nitrogen_count":0,"h_bond_donors":4,"h_bond_acceptors":8,"bio_class":"Phosphorylated sugars","pathways":["Pentose Phosphate Pathway"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","hydroxyl"],"synonyms":["Ru5P"]},
+    {"name":"Sedoheptulose-7-phosphate","hmdb_id":"HMDB0001068","kegg_id":"C05382","smiles":"OCC(=O)[C@@H](O)[C@H](O)[C@@H](O)[C@H](O)COP(O)(O)=O","formula":"C7H15O10P","exact_mass":290.0508,"monoisotopic_mass":290.0508,"logp":-3.80,"logd":-6.2,"pka":1.1,"psa":179.3,"carbon_count":7,"nitrogen_count":0,"h_bond_donors":5,"h_bond_acceptors":10,"bio_class":"Phosphorylated sugars","pathways":["Pentose Phosphate Pathway"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","hydroxyl"],"synonyms":["S7P"]},
+    {"name":"6-Phosphogluconate","hmdb_id":"HMDB0001316","kegg_id":"C00345","smiles":"OC[C@@H](O)[C@@H](O)[C@H](O)[C@@H](O)C(O)=O","formula":"C6H13O10P","exact_mass":275.0190,"monoisotopic_mass":275.0190,"logp":-3.40,"logd":-5.8,"pka":1.3,"psa":167.7,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":5,"h_bond_acceptors":10,"bio_class":"Phosphorylated sugars","pathways":["Pentose Phosphate Pathway"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","hydroxyl","carboxylate"],"synonyms":["6-PG"]},
 
-    {"name": "Succinate", "hmdb_id": "HMDB0000254", "kegg_id": "C00042",
-     "smiles": "OC(=O)CCC(O)=O", "formula": "C4H6O4",
-     "exact_mass": 118.0266, "monoisotopic_mass": 118.0266, "logp": -0.59,
-     "logd": -2.1, "pka": 4.19, "psa": 74.6, "carbon_count": 4, "nitrogen_count": 0,
-     "bio_class": "Organic acids", "pathways": ["TCA Cycle"],
-     "rp_retention_class": "early", "hilic_retention_class": "mid",
-     "functional_groups": ["carboxylate"], "synonyms": ["Butanedioic acid"]},
+    # ─── AMINO ACIDS ─────────────────────────────────────────────────────────────
+    {"name":"Glutamine","hmdb_id":"HMDB0000641","kegg_id":"C00064","smiles":"NC(=O)CCC(N)C(O)=O","formula":"C5H10N2O3","exact_mass":146.0691,"monoisotopic_mass":146.0691,"logp":-3.64,"logd":-4.0,"pka":2.17,"psa":106.3,"carbon_count":5,"nitrogen_count":2,"h_bond_donors":3,"h_bond_acceptors":5,"bio_class":"Amino acids","pathways":["Glutamine metabolism","TCA anaplerosis","Nucleotide synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","amide","carboxylate"],"synonyms":["L-Glutamine","Gln","Q"]},
+    {"name":"Glutamate","hmdb_id":"HMDB0000148","kegg_id":"C00025","smiles":"OC(=O)[C@@H](N)CCC(O)=O","formula":"C5H9NO4","exact_mass":147.0532,"monoisotopic_mass":147.0532,"logp":-3.69,"logd":-4.5,"pka":2.10,"psa":101.8,"carbon_count":5,"nitrogen_count":1,"h_bond_donors":3,"h_bond_acceptors":5,"bio_class":"Amino acids","pathways":["Glutamate metabolism","TCA Cycle","GABA synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","carboxylate"],"synonyms":["L-Glutamic acid","Glu","E"]},
+    {"name":"Aspartate","hmdb_id":"HMDB0000191","kegg_id":"C00049","smiles":"OC(=O)[C@@H](N)CC(O)=O","formula":"C4H7NO4","exact_mass":133.0375,"monoisotopic_mass":133.0375,"logp":-3.89,"logd":-4.7,"pka":1.99,"psa":101.8,"carbon_count":4,"nitrogen_count":1,"h_bond_donors":3,"h_bond_acceptors":5,"bio_class":"Amino acids","pathways":["Aspartate metabolism","Urea cycle","Purine synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","carboxylate"],"synonyms":["L-Aspartic acid","Asp","D"]},
+    {"name":"Asparagine","hmdb_id":"HMDB0000168","kegg_id":"C00152","smiles":"NC(=O)C[C@@H](N)C(O)=O","formula":"C4H8N2O3","exact_mass":132.0535,"monoisotopic_mass":132.0535,"logp":-3.82,"logd":-4.4,"pka":2.02,"psa":106.3,"carbon_count":4,"nitrogen_count":2,"h_bond_donors":3,"h_bond_acceptors":5,"bio_class":"Amino acids","pathways":["Asparagine metabolism","Protein synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","amide","carboxylate"],"synonyms":["L-Asparagine","Asn","N"]},
+    {"name":"Alanine","hmdb_id":"HMDB0000161","kegg_id":"C00041","smiles":"C[C@@H](N)C(O)=O","formula":"C3H7NO2","exact_mass":89.0477,"monoisotopic_mass":89.0477,"logp":-2.85,"logd":-3.4,"pka":2.35,"psa":63.3,"carbon_count":3,"nitrogen_count":1,"h_bond_donors":2,"h_bond_acceptors":3,"bio_class":"Amino acids","pathways":["Alanine metabolism","Glycolysis"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","carboxylate"],"synonyms":["L-Alanine","Ala","A"]},
+    {"name":"Serine","hmdb_id":"HMDB0000187","kegg_id":"C00065","smiles":"N[C@@H](CO)C(O)=O","formula":"C3H7NO3","exact_mass":105.0426,"monoisotopic_mass":105.0426,"logp":-3.07,"logd":-3.7,"pka":2.21,"psa":83.6,"carbon_count":3,"nitrogen_count":1,"h_bond_donors":3,"h_bond_acceptors":4,"bio_class":"Amino acids","pathways":["Serine biosynthesis","One-carbon metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","carboxylate","hydroxyl"],"synonyms":["L-Serine","Ser","S"]},
+    {"name":"Glycine","hmdb_id":"HMDB0000123","kegg_id":"C00037","smiles":"NCC(O)=O","formula":"C2H5NO2","exact_mass":75.0320,"monoisotopic_mass":75.0320,"logp":-3.21,"logd":-3.8,"pka":2.35,"psa":63.3,"carbon_count":2,"nitrogen_count":1,"h_bond_donors":2,"h_bond_acceptors":3,"bio_class":"Amino acids","pathways":["Glycine metabolism","One-carbon metabolism","Glutathione synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","carboxylate"],"synonyms":["Gly","G","Aminoacetic acid"]},
+    {"name":"Threonine","hmdb_id":"HMDB0000167","kegg_id":"C00188","smiles":"C[C@@H](O)[C@H](N)C(O)=O","formula":"C4H9NO3","exact_mass":119.0582,"monoisotopic_mass":119.0582,"logp":-2.57,"logd":-3.2,"pka":2.09,"psa":83.6,"carbon_count":4,"nitrogen_count":1,"h_bond_donors":3,"h_bond_acceptors":4,"bio_class":"Amino acids","pathways":["Threonine metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","carboxylate","hydroxyl"],"synonyms":["L-Threonine","Thr","T"]},
+    {"name":"Valine","hmdb_id":"HMDB0000883","kegg_id":"C00183","smiles":"CC(C)[C@@H](N)C(O)=O","formula":"C5H11NO2","exact_mass":117.0790,"monoisotopic_mass":117.0790,"logp":-2.26,"logd":-2.9,"pka":2.29,"psa":63.3,"carbon_count":5,"nitrogen_count":1,"h_bond_donors":2,"h_bond_acceptors":3,"bio_class":"Amino acids","pathways":["BCAA metabolism","Valine catabolism"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["amine","carboxylate"],"synonyms":["L-Valine","Val","V"]},
+    {"name":"Leucine","hmdb_id":"HMDB0000687","kegg_id":"C00123","smiles":"CC(C)C[C@@H](N)C(O)=O","formula":"C6H13NO2","exact_mass":131.0946,"monoisotopic_mass":131.0946,"logp":-1.52,"logd":-2.2,"pka":2.33,"psa":63.3,"carbon_count":6,"nitrogen_count":1,"h_bond_donors":2,"h_bond_acceptors":3,"bio_class":"Amino acids","pathways":["BCAA metabolism","Leucine catabolism"],"rp_retention_class":"early","hilic_retention_class":"mid","functional_groups":["amine","carboxylate"],"synonyms":["L-Leucine","Leu","L"]},
+    {"name":"Isoleucine","hmdb_id":"HMDB0000172","kegg_id":"C00407","smiles":"CC[C@H](C)[C@H](N)C(O)=O","formula":"C6H13NO2","exact_mass":131.0946,"monoisotopic_mass":131.0946,"logp":-1.52,"logd":-2.2,"pka":2.32,"psa":63.3,"carbon_count":6,"nitrogen_count":1,"h_bond_donors":2,"h_bond_acceptors":3,"bio_class":"Amino acids","pathways":["BCAA metabolism","Isoleucine catabolism"],"rp_retention_class":"early","hilic_retention_class":"mid","functional_groups":["amine","carboxylate"],"synonyms":["L-Isoleucine","Ile","I"]},
+    {"name":"Proline","hmdb_id":"HMDB0000162","kegg_id":"C00148","smiles":"OC(=O)[C@@H]1CCCN1","formula":"C5H9NO2","exact_mass":115.0633,"monoisotopic_mass":115.0633,"logp":-2.54,"logd":-3.1,"pka":1.95,"psa":49.3,"carbon_count":5,"nitrogen_count":1,"h_bond_donors":2,"h_bond_acceptors":3,"bio_class":"Amino acids","pathways":["Proline metabolism","Collagen synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["amine","carboxylate"],"synonyms":["L-Proline","Pro","P"]},
+    {"name":"Lysine","hmdb_id":"HMDB0000182","kegg_id":"C00047","smiles":"NCCCC[C@H](N)C(O)=O","formula":"C6H14N2O2","exact_mass":146.1055,"monoisotopic_mass":146.1055,"logp":-3.05,"logd":-4.5,"pka":2.16,"psa":97.7,"carbon_count":6,"nitrogen_count":2,"h_bond_donors":4,"h_bond_acceptors":4,"bio_class":"Amino acids","pathways":["Lysine catabolism","Acetylation"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","carboxylate"],"synonyms":["L-Lysine","Lys","K"]},
+    {"name":"Arginine","hmdb_id":"HMDB0000517","kegg_id":"C00062","smiles":"NC(=N)NCCC[C@H](N)C(O)=O","formula":"C6H14N4O2","exact_mass":174.1117,"monoisotopic_mass":174.1117,"logp":-4.20,"logd":-5.8,"pka":1.82,"psa":145.3,"carbon_count":6,"nitrogen_count":4,"h_bond_donors":5,"h_bond_acceptors":6,"bio_class":"Amino acids","pathways":["Urea cycle","Nitric oxide synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["amine","guanidinium","carboxylate"],"synonyms":["L-Arginine","Arg","R"]},
+    {"name":"Histidine","hmdb_id":"HMDB0000177","kegg_id":"C00135","smiles":"NC(Cc1cnc[nH]1)C(O)=O","formula":"C6H9N3O2","exact_mass":155.0695,"monoisotopic_mass":155.0695,"logp":-3.56,"logd":-4.8,"pka":1.80,"psa":107.9,"carbon_count":6,"nitrogen_count":3,"h_bond_donors":3,"h_bond_acceptors":5,"bio_class":"Amino acids","pathways":["Histidine metabolism","Histamine synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","imidazole","carboxylate"],"synonyms":["L-Histidine","His","H"]},
+    {"name":"Phenylalanine","hmdb_id":"HMDB0000159","kegg_id":"C00079","smiles":"N[C@@H](Cc1ccccc1)C(O)=O","formula":"C9H11NO2","exact_mass":165.0790,"monoisotopic_mass":165.0790,"logp":-1.98,"logd":-2.8,"pka":1.83,"psa":63.3,"carbon_count":9,"nitrogen_count":1,"h_bond_donors":2,"h_bond_acceptors":3,"bio_class":"Amino acids","pathways":["Phenylalanine metabolism","Tyrosine synthesis"],"rp_retention_class":"mid","hilic_retention_class":"mid","functional_groups":["amine","carboxylate","aromatic"],"synonyms":["L-Phenylalanine","Phe","F"]},
+    {"name":"Tyrosine","hmdb_id":"HMDB0000158","kegg_id":"C00082","smiles":"N[C@@H](Cc1ccc(O)cc1)C(O)=O","formula":"C9H11NO3","exact_mass":181.0739,"monoisotopic_mass":181.0739,"logp":-2.26,"logd":-3.2,"pka":2.20,"psa":83.6,"carbon_count":9,"nitrogen_count":1,"h_bond_donors":3,"h_bond_acceptors":4,"bio_class":"Amino acids","pathways":["Tyrosine metabolism","Dopamine synthesis","Thyroid hormone"],"rp_retention_class":"mid","hilic_retention_class":"mid","functional_groups":["amine","carboxylate","hydroxyl","aromatic"],"synonyms":["L-Tyrosine","Tyr","Y"]},
+    {"name":"Tryptophan","hmdb_id":"HMDB0000929","kegg_id":"C00078","smiles":"N[C@@H](Cc1c[nH]c2ccccc12)C(O)=O","formula":"C11H12N2O2","exact_mass":204.0899,"monoisotopic_mass":204.0899,"logp":-1.06,"logd":-2.0,"pka":2.46,"psa":79.1,"carbon_count":11,"nitrogen_count":2,"h_bond_donors":3,"h_bond_acceptors":4,"bio_class":"Amino acids","pathways":["Tryptophan metabolism","Serotonin synthesis","NAD+ synthesis"],"rp_retention_class":"mid","hilic_retention_class":"mid","functional_groups":["amine","carboxylate","indole"],"synonyms":["L-Tryptophan","Trp","W"]},
+    {"name":"Methionine","hmdb_id":"HMDB0000696","kegg_id":"C00073","smiles":"CSCC[C@H](N)C(O)=O","formula":"C5H11NO2S","exact_mass":149.0510,"monoisotopic_mass":149.0510,"logp":-1.87,"logd":-2.7,"pka":2.13,"psa":71.7,"carbon_count":5,"nitrogen_count":1,"h_bond_donors":2,"h_bond_acceptors":3,"bio_class":"Amino acids","pathways":["Methionine metabolism","One-carbon metabolism","SAM cycle"],"rp_retention_class":"early","hilic_retention_class":"mid","functional_groups":["amine","carboxylate","thioether"],"synonyms":["L-Methionine","Met","M"]},
+    {"name":"Cysteine","hmdb_id":"HMDB0000574","kegg_id":"C00097","smiles":"N[C@@H](CS)C(O)=O","formula":"C3H7NO2S","exact_mass":121.0197,"monoisotopic_mass":121.0197,"logp":-2.49,"logd":-3.2,"pka":1.92,"psa":84.5,"carbon_count":3,"nitrogen_count":1,"h_bond_donors":3,"h_bond_acceptors":3,"bio_class":"Amino acids","pathways":["Cysteine metabolism","Glutathione synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["amine","carboxylate","thiol"],"synonyms":["L-Cysteine","Cys","C"]},
 
-    {"name": "Fumarate", "hmdb_id": "HMDB0000122", "kegg_id": "C00122",
-     "smiles": "OC(=O)/C=C/C(O)=O", "formula": "C4H4O4",
-     "exact_mass": 116.0110, "monoisotopic_mass": 116.0110, "logp": -0.60,
-     "logd": -2.2, "pka": 3.03, "psa": 74.6, "carbon_count": 4, "nitrogen_count": 0,
-     "bio_class": "Organic acids", "pathways": ["TCA Cycle"],
-     "rp_retention_class": "early", "hilic_retention_class": "mid",
-     "functional_groups": ["carboxylate"]},
+    # ─── NUCLEOTIDES & NUCLEOSIDES ────────────────────────────────────────────────
+    {"name":"ATP","hmdb_id":"HMDB0000538","kegg_id":"C00002","smiles":"Nc1ncnc2n(cnc12)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OP(O)(O)=O)[C@@H](O)[C@H]1O","formula":"C10H16N5O13P3","exact_mass":506.9957,"monoisotopic_mass":506.9957,"logp":-3.6,"logd":-7.2,"pka":1.0,"psa":290.8,"carbon_count":10,"nitrogen_count":5,"h_bond_donors":5,"h_bond_acceptors":13,"bio_class":"Nucleotides","pathways":["Purine metabolism","Energy metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","adenine"],"synonyms":["Adenosine triphosphate","ATP"]},
+    {"name":"ADP","hmdb_id":"HMDB0001341","kegg_id":"C00008","smiles":"Nc1ncnc2n(cnc12)[C@@H]1O[C@H](COP(O)(=O)OP(O)(O)=O)[C@@H](O)[C@H]1O","formula":"C10H15N5O10P2","exact_mass":427.0294,"monoisotopic_mass":427.0294,"logp":-3.2,"logd":-6.4,"pka":1.1,"psa":228.8,"carbon_count":10,"nitrogen_count":5,"h_bond_donors":4,"h_bond_acceptors":10,"bio_class":"Nucleotides","pathways":["Purine metabolism","Energy metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","adenine"],"synonyms":["Adenosine diphosphate"]},
+    {"name":"AMP","hmdb_id":"HMDB0000045","kegg_id":"C00020","smiles":"Nc1ncnc2n(cnc12)[C@@H]1O[C@H](COP(O)(O)=O)[C@@H](O)[C@H]1O","formula":"C10H14N5O7P","exact_mass":347.0630,"monoisotopic_mass":347.0630,"logp":-1.8,"logd":-4.5,"pka":1.3,"psa":172.8,"carbon_count":10,"nitrogen_count":5,"h_bond_donors":3,"h_bond_acceptors":7,"bio_class":"Nucleotides","pathways":["Purine metabolism","cAMP signaling"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","adenine"],"synonyms":["Adenosine monophosphate","Adenylic acid"]},
+    {"name":"GTP","hmdb_id":"HMDB0001273","kegg_id":"C00044","smiles":"Nc1nc2c(ncn2[C@@H]2O[C@H](COP(O)(=O)OP(O)(=O)OP(O)(O)=O)[C@@H](O)[C@H]2O)c(=O)[nH]1","formula":"C10H16N5O14P3","exact_mass":522.9906,"monoisotopic_mass":522.9906,"logp":-3.8,"logd":-7.4,"pka":0.9,"psa":299.9,"carbon_count":10,"nitrogen_count":5,"h_bond_donors":5,"h_bond_acceptors":14,"bio_class":"Nucleotides","pathways":["Purine metabolism","G-protein signaling"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","guanine"],"synonyms":["Guanosine triphosphate"]},
+    {"name":"NAD+","hmdb_id":"HMDB0000902","kegg_id":"C00003","smiles":"NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP([O-])(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O","formula":"C21H28N7O14P2","exact_mass":663.1091,"monoisotopic_mass":663.1091,"logp":-3.5,"logd":-7.8,"pka":0.8,"psa":330.5,"carbon_count":21,"nitrogen_count":7,"h_bond_donors":5,"h_bond_acceptors":14,"bio_class":"Cofactors","pathways":["NAD metabolism","Redox metabolism","Sirtuin signaling"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["nicotinamide","phosphate"],"synonyms":["Nicotinamide adenine dinucleotide","NAD"]},
+    {"name":"NADH","hmdb_id":"HMDB0001487","kegg_id":"C00004","smiles":"NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O","formula":"C21H29N7O14P2","exact_mass":664.1170,"monoisotopic_mass":664.1170,"logp":-3.5,"logd":-7.8,"pka":0.8,"psa":330.5,"carbon_count":21,"nitrogen_count":7,"h_bond_donors":6,"h_bond_acceptors":14,"bio_class":"Cofactors","pathways":["NAD metabolism","Redox metabolism","Oxidative phosphorylation"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["nicotinamide","phosphate"],"synonyms":["Reduced nicotinamide adenine dinucleotide"]},
+    {"name":"NADP+","hmdb_id":"HMDB0000217","kegg_id":"C00006","smiles":"NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2OP(O)(O)=O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O","formula":"C21H29N7O17P3","exact_mass":743.0754,"monoisotopic_mass":743.0754,"logp":-3.8,"logd":-8.0,"pka":0.7,"psa":360.5,"carbon_count":21,"nitrogen_count":7,"h_bond_donors":6,"h_bond_acceptors":17,"bio_class":"Cofactors","pathways":["NADPH metabolism","Pentose Phosphate Pathway","Antioxidant defense"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["nicotinamide","phosphate"],"synonyms":["Nicotinamide adenine dinucleotide phosphate"]},
+    {"name":"NADPH","hmdb_id":"HMDB0000221","kegg_id":"C00005","smiles":"NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2OP(O)(O)=O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O","formula":"C21H30N7O17P3","exact_mass":744.0833,"monoisotopic_mass":744.0833,"logp":-3.8,"logd":-8.0,"pka":0.7,"psa":360.5,"carbon_count":21,"nitrogen_count":7,"h_bond_donors":7,"h_bond_acceptors":17,"bio_class":"Cofactors","pathways":["NADPH metabolism","Fatty acid synthesis","Antioxidant defense"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["nicotinamide","phosphate"],"synonyms":["Reduced NADP"]},
+    {"name":"cAMP","hmdb_id":"HMDB0000058","kegg_id":"C00575","smiles":"Nc1ncnc2n(cnc12)[C@@H]1O[C@@H]2COP(O)(=O)O[C@H]2[C@@H]1O","formula":"C10H12N5O6P","exact_mass":329.0525,"monoisotopic_mass":329.0525,"logp":-1.5,"logd":-3.8,"pka":1.0,"psa":162.4,"carbon_count":10,"nitrogen_count":5,"h_bond_donors":2,"h_bond_acceptors":6,"bio_class":"Nucleotides","pathways":["cAMP signaling","PKA pathway"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["phosphate","adenine"],"synonyms":["Cyclic AMP","3',5'-cAMP"]},
 
-    {"name": "Malate", "hmdb_id": "HMDB0000156", "kegg_id": "C00149",
-     "smiles": "OC(CC(O)=O)C(O)=O", "formula": "C4H6O5",
-     "exact_mass": 134.0215, "monoisotopic_mass": 134.0215, "logp": -1.26,
-     "logd": -2.6, "pka": 3.40, "psa": 94.8, "carbon_count": 4, "nitrogen_count": 0,
-     "bio_class": "Organic acids", "pathways": ["TCA Cycle", "Malate-Aspartate Shuttle"],
-     "rp_retention_class": "early", "hilic_retention_class": "late",
-     "functional_groups": ["carboxylate", "hydroxyl"]},
+    # ─── ACYL-CoAs ───────────────────────────────────────────────────────────────
+    {"name":"Acetyl-CoA","hmdb_id":"HMDB0001206","kegg_id":"C00024","smiles":"CC(=O)SCCNC(=O)CCNC(=O)[C@@H](O)C(C)(C)COP(O)(=O)OP(O)(=O)OC[C@H]1O[C@H]([C@H](O)[C@@H]1OP(O)(O)=O)n1cnc2c(N)ncnc12","formula":"C23H38N7O17P3S","exact_mass":809.1257,"monoisotopic_mass":809.1257,"logp":-3.0,"logd":-7.5,"pka":0.8,"psa":370.2,"carbon_count":23,"nitrogen_count":7,"h_bond_donors":7,"h_bond_acceptors":17,"bio_class":"Acyl-CoAs","pathways":["TCA Cycle","Fatty acid synthesis","Mevalonate pathway"],"rp_retention_class":"mid","hilic_retention_class":"very_late","functional_groups":["thioester","phosphate","CoA"],"synonyms":["Acetyl coenzyme A"]},
+    {"name":"Malonyl-CoA","hmdb_id":"HMDB0001175","kegg_id":"C00083","smiles":"OC(=O)CC(=O)SCCNC(=O)CCNC(=O)[C@@H](O)C(C)(C)COP(O)(=O)OP(O)(=O)OC[C@H]1O[C@H]([C@H](O)[C@@H]1OP(O)(O)=O)n1cnc2c(N)ncnc12","formula":"C24H38N7O19P3S","exact_mass":853.1155,"monoisotopic_mass":853.1155,"logp":-3.2,"logd":-7.8,"pka":0.7,"psa":390.2,"carbon_count":24,"nitrogen_count":7,"h_bond_donors":7,"h_bond_acceptors":19,"bio_class":"Acyl-CoAs","pathways":["Fatty acid synthesis","ACC regulation"],"rp_retention_class":"mid","hilic_retention_class":"very_late","functional_groups":["thioester","phosphate","CoA","carboxylate"],"synonyms":["Malonyl coenzyme A"]},
+    {"name":"Succinyl-CoA","hmdb_id":"HMDB0001022","kegg_id":"C00091","smiles":"OC(=O)CCC(=O)SCCNC(=O)CCNC(=O)[C@@H](O)C(C)(C)COP(O)(=O)OP(O)(=O)OC[C@H]1O[C@H]([C@H](O)[C@@H]1OP(O)(O)=O)n1cnc2c(N)ncnc12","formula":"C25H40N7O19P3S","exact_mass":867.1312,"monoisotopic_mass":867.1312,"logp":-3.1,"logd":-7.6,"pka":0.8,"psa":390.2,"carbon_count":25,"nitrogen_count":7,"h_bond_donors":7,"h_bond_acceptors":19,"bio_class":"Acyl-CoAs","pathways":["TCA Cycle","Heme synthesis"],"rp_retention_class":"mid","hilic_retention_class":"very_late","functional_groups":["thioester","phosphate","CoA","carboxylate"],"synonyms":["Succinyl coenzyme A"]},
+    {"name":"Palmitoyl-CoA","hmdb_id":"HMDB0001338","kegg_id":"C00154","smiles":"CCCCCCCCCCCCCCCC(=O)SCCNC(=O)CCNC(=O)[C@@H](O)C(C)(C)COP(O)(=O)OP(O)(=O)OC[C@H]1O[C@H]([C@H](O)[C@@H]1OP(O)(O)=O)n1cnc2c(N)ncnc12","formula":"C37H66N7O17P3S","exact_mass":1005.3818,"monoisotopic_mass":1005.3818,"logp":1.5,"logd":-3.0,"pka":0.8,"psa":370.2,"carbon_count":37,"nitrogen_count":7,"h_bond_donors":7,"h_bond_acceptors":17,"bio_class":"Acyl-CoAs","pathways":["Fatty acid oxidation","Fatty acid synthesis"],"rp_retention_class":"late","hilic_retention_class":"very_late","functional_groups":["thioester","phosphate","CoA"],"synonyms":["Palmitoyl coenzyme A","C16:0-CoA"]},
 
-    {"name": "Oxaloacetate", "hmdb_id": "HMDB0000223", "kegg_id": "C00036",
-     "smiles": "OC(=O)CC(=O)C(O)=O", "formula": "C4H4O5",
-     "exact_mass": 132.0059, "monoisotopic_mass": 132.0059, "logp": -1.20,
-     "logd": -2.8, "pka": 2.55, "psa": 94.8, "carbon_count": 4, "nitrogen_count": 0,
-     "bio_class": "Organic acids", "pathways": ["TCA Cycle"],
-     "rp_retention_class": "early", "hilic_retention_class": "late",
-     "functional_groups": ["carboxylate", "keto"]},
+    # ─── FATTY ACIDS ─────────────────────────────────────────────────────────────
+    {"name":"Palmitic acid","hmdb_id":"HMDB0000220","kegg_id":"C00249","smiles":"CCCCCCCCCCCCCCCC(O)=O","formula":"C16H32O2","exact_mass":256.2402,"monoisotopic_mass":256.2402,"logp":7.17,"logd":5.1,"pka":4.75,"psa":37.3,"carbon_count":16,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Fatty acids","pathways":["Fatty acid metabolism","Lipid synthesis"],"rp_retention_class":"very_late","hilic_retention_class":"early","functional_groups":["carboxylate"],"synonyms":["Hexadecanoic acid","C16:0"]},
+    {"name":"Stearic acid","hmdb_id":"HMDB0000827","kegg_id":"C01530","smiles":"CCCCCCCCCCCCCCCCCC(O)=O","formula":"C18H36O2","exact_mass":284.2715,"monoisotopic_mass":284.2715,"logp":8.23,"logd":6.2,"pka":4.75,"psa":37.3,"carbon_count":18,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Fatty acids","pathways":["Fatty acid metabolism"],"rp_retention_class":"very_late","hilic_retention_class":"early","functional_groups":["carboxylate"],"synonyms":["Octadecanoic acid","C18:0"]},
+    {"name":"Oleic acid","hmdb_id":"HMDB0000207","kegg_id":"C00712","smiles":"CCCCCCCCC=CCCCCCCCC(O)=O","formula":"C18H34O2","exact_mass":282.2559,"monoisotopic_mass":282.2559,"logp":7.64,"logd":5.5,"pka":4.77,"psa":37.3,"carbon_count":18,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Fatty acids","pathways":["Fatty acid metabolism","Olive oil metabolism"],"rp_retention_class":"very_late","hilic_retention_class":"early","functional_groups":["carboxylate"],"synonyms":["cis-9-Octadecenoic acid","C18:1"]},
+    {"name":"Linoleic acid","hmdb_id":"HMDB0000673","kegg_id":"C01595","smiles":"CCCCCC=CCC=CCCCCCCCC(O)=O","formula":"C18H32O2","exact_mass":280.2402,"monoisotopic_mass":280.2402,"logp":7.05,"logd":4.9,"pka":4.77,"psa":37.3,"carbon_count":18,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Fatty acids","pathways":["Essential fatty acid metabolism","Eicosanoid synthesis"],"rp_retention_class":"very_late","hilic_retention_class":"early","functional_groups":["carboxylate"],"synonyms":["cis,cis-9,12-Octadecadienoic acid","C18:2","LA"]},
+    {"name":"Arachidonic acid","hmdb_id":"HMDB0001043","kegg_id":"C00219","smiles":"CCCCC=CCC=CCC=CCC=CCCCC(O)=O","formula":"C20H32O2","exact_mass":304.2402,"monoisotopic_mass":304.2402,"logp":6.99,"logd":4.8,"pka":4.77,"psa":37.3,"carbon_count":20,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Fatty acids","pathways":["Eicosanoid synthesis","Prostaglandin synthesis","Inflammation"],"rp_retention_class":"very_late","hilic_retention_class":"early","functional_groups":["carboxylate"],"synonyms":["AA","C20:4","5,8,11,14-Eicosatetraenoic acid"]},
+    {"name":"DHA","hmdb_id":"HMDB0002183","kegg_id":"C06429","smiles":"CCCC=CCC=CCC=CCC=CCC=CCC=CCCCC(O)=O","formula":"C22H32O2","exact_mass":328.2402,"monoisotopic_mass":328.2402,"logp":7.22,"logd":5.0,"pka":4.77,"psa":37.3,"carbon_count":22,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Fatty acids","pathways":["Omega-3 fatty acid metabolism","Neuroprotection"],"rp_retention_class":"very_late","hilic_retention_class":"early","functional_groups":["carboxylate"],"synonyms":["Docosahexaenoic acid","C22:6","Cervonic acid"]},
+    {"name":"EPA","hmdb_id":"HMDB0001999","kegg_id":"C06428","smiles":"CCCCC=CCC=CCC=CCC=CCC=CCCCC(O)=O","formula":"C20H30O2","exact_mass":302.2246,"monoisotopic_mass":302.2246,"logp":6.75,"logd":4.6,"pka":4.77,"psa":37.3,"carbon_count":20,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Fatty acids","pathways":["Omega-3 fatty acid metabolism","Eicosanoid synthesis"],"rp_retention_class":"very_late","hilic_retention_class":"early","functional_groups":["carboxylate"],"synonyms":["Eicosapentaenoic acid","C20:5","Timnodonic acid"]},
 
-    # Glycolysis
-    {"name": "Glucose", "hmdb_id": "HMDB0000122", "kegg_id": "C00031",
-     "smiles": "OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O", "formula": "C6H12O6",
-     "exact_mass": 180.0634, "monoisotopic_mass": 180.0634, "logp": -3.24,
-     "logd": -3.24, "pka": 12.1, "psa": 110.4, "carbon_count": 6, "nitrogen_count": 0,
-     "bio_class": "Carbohydrates", "pathways": ["Glycolysis", "Pentose Phosphate Pathway"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "late",
-     "functional_groups": ["hydroxyl"], "synonyms": ["D-Glucose", "Dextrose", "Blood sugar"]},
+    # ─── NEUROTRANSMITTERS ────────────────────────────────────────────────────────
+    {"name":"Dopamine","hmdb_id":"HMDB0000073","kegg_id":"C03758","smiles":"NCCc1ccc(O)c(O)c1","formula":"C8H11NO2","exact_mass":153.0790,"monoisotopic_mass":153.0790,"logp":-1.48,"logd":-2.5,"pka":8.93,"psa":72.7,"carbon_count":8,"nitrogen_count":1,"h_bond_donors":3,"h_bond_acceptors":3,"bio_class":"Neurotransmitters","pathways":["Dopamine synthesis","Catecholamine metabolism"],"rp_retention_class":"early","hilic_retention_class":"late","functional_groups":["amine","catechol"],"synonyms":["3,4-Dihydroxyphenethylamine","DA"]},
+    {"name":"Serotonin","hmdb_id":"HMDB0000259","kegg_id":"C00780","smiles":"NCCc1c[nH]c2ccc(O)cc12","formula":"C10H12N2O","exact_mass":176.0950,"monoisotopic_mass":176.0950,"logp":-0.62,"logd":-1.8,"pka":10.0,"psa":67.6,"carbon_count":10,"nitrogen_count":2,"h_bond_donors":3,"h_bond_acceptors":2,"bio_class":"Neurotransmitters","pathways":["Serotonin synthesis","Tryptophan metabolism"],"rp_retention_class":"early","hilic_retention_class":"late","functional_groups":["amine","indole","hydroxyl"],"synonyms":["5-Hydroxytryptamine","5-HT"]},
+    {"name":"GABA","hmdb_id":"HMDB0000112","kegg_id":"C00334","smiles":"NCCCC(O)=O","formula":"C4H9NO2","exact_mass":103.0633,"monoisotopic_mass":103.0633,"logp":-3.17,"logd":-3.9,"pka":4.03,"psa":63.3,"carbon_count":4,"nitrogen_count":1,"h_bond_donors":2,"h_bond_acceptors":3,"bio_class":"Neurotransmitters","pathways":["GABA synthesis","Glutamate metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["amine","carboxylate"],"synonyms":["gamma-Aminobutyric acid","4-Aminobutanoic acid"]},
+    {"name":"Acetylcholine","hmdb_id":"HMDB0000895","kegg_id":"C01996","smiles":"CC(=O)OCC[N+](C)(C)C","formula":"C7H16NO2","exact_mass":146.1181,"monoisotopic_mass":146.1181,"logp":-1.28,"logd":-3.5,"pka":None,"psa":36.4,"carbon_count":7,"nitrogen_count":1,"h_bond_donors":0,"h_bond_acceptors":3,"bio_class":"Neurotransmitters","pathways":["Acetylcholine synthesis","Cholinergic signaling"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["quaternary_amine","ester"],"synonyms":["ACh"]},
 
-    {"name": "Pyruvate", "hmdb_id": "HMDB0000243", "kegg_id": "C00022",
-     "smiles": "CC(=O)C(O)=O", "formula": "C3H4O3",
-     "exact_mass": 88.0160, "monoisotopic_mass": 88.0160, "logp": -0.37,
-     "logd": -1.4, "pka": 2.49, "psa": 54.4, "carbon_count": 3, "nitrogen_count": 0,
-     "bio_class": "Organic acids", "pathways": ["Glycolysis", "TCA Cycle"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "mid",
-     "functional_groups": ["carboxylate", "keto"]},
+    # ─── VITAMINS & COFACTORS ─────────────────────────────────────────────────────
+    {"name":"Coenzyme A","hmdb_id":"HMDB0001423","kegg_id":"C00010","smiles":"CC(C)(COP(O)(=O)OP(O)(=O)OC[C@H]1O[C@H]([C@H](O)[C@@H]1OP(O)(O)=O)n1cnc2c(N)ncnc12)[C@@H](O)C(=O)NCCC(=O)NCCS","formula":"C21H36N7O16P3S","exact_mass":767.1151,"monoisotopic_mass":767.1151,"logp":-3.1,"logd":-7.5,"pka":0.9,"psa":360.5,"carbon_count":21,"nitrogen_count":7,"h_bond_donors":8,"h_bond_acceptors":16,"bio_class":"Cofactors","pathways":["Fatty acid metabolism","TCA Cycle","Pantothenate metabolism"],"rp_retention_class":"early","hilic_retention_class":"very_late","functional_groups":["thiol","phosphate","CoA"],"synonyms":["CoA","CoASH"]},
+    {"name":"Thiamine","hmdb_id":"HMDB0000235","kegg_id":"C00378","smiles":"Cc1ncc(C[n+]2csc(CCO)c2C)c(N)n1","formula":"C12H17N4OS","exact_mass":265.1123,"monoisotopic_mass":265.1123,"logp":-3.35,"logd":-4.2,"pka":4.80,"psa":107.1,"carbon_count":12,"nitrogen_count":4,"h_bond_donors":1,"h_bond_acceptors":5,"bio_class":"Vitamins","pathways":["Thiamine metabolism","TCA Cycle","Pyruvate dehydrogenase"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["thiazole","pyrimidine"],"synonyms":["Vitamin B1","Aneurine"]},
+    {"name":"Riboflavin","hmdb_id":"HMDB0000244","kegg_id":"C00255","smiles":"Cc1cc2c(cc1C)N(C[C@H](O)[C@H](O)[C@H](O)CO)c1cc(=O)[nH]c(=O)c1N2","formula":"C17H20N4O6","exact_mass":376.1383,"monoisotopic_mass":376.1383,"logp":-1.46,"logd":-2.2,"pka":9.69,"psa":153.3,"carbon_count":17,"nitrogen_count":4,"h_bond_donors":4,"h_bond_acceptors":10,"bio_class":"Vitamins","pathways":["Riboflavin metabolism","FAD synthesis"],"rp_retention_class":"early","hilic_retention_class":"mid","functional_groups":["isoalloxazine","hydroxyl"],"synonyms":["Vitamin B2","Lactoflavin"]},
+    {"name":"Pantothenate","hmdb_id":"HMDB0000210","kegg_id":"C00864","smiles":"CC(C)(CO)[C@@H](O)C(=O)NCCC(O)=O","formula":"C9H17NO5","exact_mass":219.1107,"monoisotopic_mass":219.1107,"logp":-1.08,"logd":-2.0,"pka":4.53,"psa":101.8,"carbon_count":9,"nitrogen_count":1,"h_bond_donors":3,"h_bond_acceptors":5,"bio_class":"Vitamins","pathways":["Pantothenate metabolism","CoA biosynthesis"],"rp_retention_class":"early","hilic_retention_class":"mid","functional_groups":["hydroxyl","amide","carboxylate"],"synonyms":["Vitamin B5","Pantothenic acid"]},
+    {"name":"Biotin","hmdb_id":"HMDB0000030","kegg_id":"C00120","smiles":"OC(=O)CCCCC1SC[C@@H]2NC(=O)N[C@H]12","formula":"C10H16N2O3S","exact_mass":244.0882,"monoisotopic_mass":244.0882,"logp":0.39,"logd":-0.8,"pka":4.50,"psa":118.2,"carbon_count":10,"nitrogen_count":2,"h_bond_donors":3,"h_bond_acceptors":5,"bio_class":"Vitamins","pathways":["Biotin metabolism","Carboxylation reactions"],"rp_retention_class":"early","hilic_retention_class":"mid","functional_groups":["thiolane","ureido","carboxylate"],"synonyms":["Vitamin B7","Vitamin H","d-Biotin"]},
 
-    {"name": "Lactate", "hmdb_id": "HMDB0000190", "kegg_id": "C00186",
-     "smiles": "C[C@@H](O)C(O)=O", "formula": "C3H6O3",
-     "exact_mass": 90.0317, "monoisotopic_mass": 90.0317, "logp": -0.72,
-     "logd": -1.6, "pka": 3.86, "psa": 57.5, "carbon_count": 3, "nitrogen_count": 0,
-     "bio_class": "Organic acids", "pathways": ["Glycolysis", "Warburg effect"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "mid",
-     "functional_groups": ["carboxylate", "hydroxyl"]},
+    # ─── BILE ACIDS ──────────────────────────────────────────────────────────────
+    {"name":"Cholic acid","hmdb_id":"HMDB0000619","kegg_id":"C00695","smiles":"[C@@H]1([C@H]2C[C@H]3CC[C@@H]4C[C@@H](O)CC[C@]4(C)[C@H]3C[C@@H]2[C@@]1(C)CCC(O)=O)(O)O","formula":"C24H40O5","exact_mass":408.2876,"monoisotopic_mass":408.2876,"logp":2.35,"logd":0.8,"pka":4.98,"psa":97.9,"carbon_count":24,"nitrogen_count":0,"h_bond_donors":4,"h_bond_acceptors":5,"bio_class":"Bile acids","pathways":["Primary bile acid synthesis","Cholesterol metabolism"],"rp_retention_class":"late","hilic_retention_class":"early","functional_groups":["hydroxyl","carboxylate","steroid"],"synonyms":["3alpha,7alpha,12alpha-Trihydroxy-5beta-cholanoic acid"]},
+    {"name":"Deoxycholic acid","hmdb_id":"HMDB0000626","kegg_id":"C04483","smiles":"[C@@H]1([C@H]2C[C@H]3CC[C@@H]4C[C@@H](O)CC[C@]4(C)[C@H]3C[C@@H]2[C@@]1(C)CCC(O)=O)O","formula":"C24H40O4","exact_mass":392.2927,"monoisotopic_mass":392.2927,"logp":3.15,"logd":1.5,"pka":5.15,"psa":77.8,"carbon_count":24,"nitrogen_count":0,"h_bond_donors":3,"h_bond_acceptors":4,"bio_class":"Bile acids","pathways":["Secondary bile acid synthesis","Gut microbiome metabolism"],"rp_retention_class":"late","hilic_retention_class":"early","functional_groups":["hydroxyl","carboxylate","steroid"],"synonyms":["DCA","3alpha,12alpha-Dihydroxy-5beta-cholanoic acid"]},
+    {"name":"Taurocholic acid","hmdb_id":"HMDB0000036","kegg_id":"C05122","smiles":"[C@@H]1([C@H]2C[C@H]3CC[C@@H]4C[C@@H](O)CC[C@]4(C)[C@H]3C[C@@H]2[C@@]1(C)CCC(=O)NCCS(O)(=O)=O)(O)O","formula":"C26H45NO7S","exact_mass":515.2922,"monoisotopic_mass":515.2922,"logp":1.28,"logd":-0.8,"pka":1.80,"psa":143.7,"carbon_count":26,"nitrogen_count":1,"h_bond_donors":5,"h_bond_acceptors":8,"bio_class":"Bile acids","pathways":["Conjugated bile acid metabolism","Enterohepatic circulation"],"rp_retention_class":"late","hilic_retention_class":"mid","functional_groups":["hydroxyl","sulfonate","amide","steroid"],"synonyms":["TCA","Taurocholate"]},
 
-    {"name": "Fructose-6-phosphate", "hmdb_id": "HMDB0000124", "kegg_id": "C00085",
-     "smiles": "OC[C@H]1OC(O)(COP(O)(O)=O)[C@@H](O)[C@@H]1O", "formula": "C6H13O9P",
-     "exact_mass": 260.0297, "monoisotopic_mass": 260.0297, "logp": -3.50,
-     "logd": -5.5, "pka": 1.2, "psa": 159.3, "carbon_count": 6, "nitrogen_count": 0,
-     "bio_class": "Phosphorylated sugars", "pathways": ["Glycolysis", "Pentose Phosphate Pathway"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "very_late",
-     "functional_groups": ["phosphate", "hydroxyl"]},
+    # ─── EICOSANOIDS ─────────────────────────────────────────────────────────────
+    {"name":"Prostaglandin E2","hmdb_id":"HMDB0001220","kegg_id":"C00584","smiles":"CCCCC[C@@H](O)C=C[C@@H]1[C@@H](C=CC1=O)CCCCCCC(O)=O","formula":"C20H32O5","exact_mass":352.2250,"monoisotopic_mass":352.2250,"logp":2.84,"logd":1.2,"pka":4.90,"psa":94.8,"carbon_count":20,"nitrogen_count":0,"h_bond_donors":3,"h_bond_acceptors":5,"bio_class":"Eicosanoids","pathways":["Prostaglandin synthesis","Inflammation","Arachidonic acid metabolism"],"rp_retention_class":"late","hilic_retention_class":"early","functional_groups":["hydroxyl","keto","carboxylate"],"synonyms":["PGE2","Dinoprostone"]},
+    {"name":"Thromboxane B2","hmdb_id":"HMDB0003252","kegg_id":"C05978","smiles":"CCCCC[C@@H](O)CC=C[C@@H]1OC(CCCC(O)=O)C(=O)[C@@H]1O","formula":"C20H34O6","exact_mass":370.2355,"monoisotopic_mass":370.2355,"logp":1.95,"logd":0.4,"pka":4.85,"psa":115.1,"carbon_count":20,"nitrogen_count":0,"h_bond_donors":4,"h_bond_acceptors":6,"bio_class":"Eicosanoids","pathways":["Thromboxane synthesis","Platelet aggregation"],"rp_retention_class":"late","hilic_retention_class":"early","functional_groups":["hydroxyl","keto","carboxylate"],"synonyms":["TXB2"]},
 
-    # Amino Acids
-    {"name": "Glutamine", "hmdb_id": "HMDB0000641", "kegg_id": "C00064",
-     "smiles": "NC(=O)CCC(N)C(O)=O", "formula": "C5H10N2O3",
-     "exact_mass": 146.0691, "monoisotopic_mass": 146.0691, "logp": -3.64,
-     "logd": -4.0, "pka": 2.17, "psa": 106.3, "carbon_count": 5, "nitrogen_count": 2,
-     "bio_class": "Amino acids", "pathways": ["Glutamine metabolism", "TCA anaplerosis", "Nitrogen metabolism"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "late",
-     "functional_groups": ["amine", "amide", "carboxylate"], "synonyms": ["L-Glutamine", "Gln", "Q"]},
+    # ─── ORGANIC ACIDS ───────────────────────────────────────────────────────────
+    {"name":"Acetate","hmdb_id":"HMDB0000042","kegg_id":"C00033","smiles":"CC(O)=O","formula":"C2H4O2","exact_mass":60.0211,"monoisotopic_mass":60.0211,"logp":-0.17,"logd":-1.0,"pka":4.76,"psa":37.3,"carbon_count":2,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Organic acids","pathways":["Short chain fatty acid metabolism","Acetate metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["carboxylate"],"synonyms":["Acetic acid","Ethanoic acid"]},
+    {"name":"Butyrate","hmdb_id":"HMDB0000039","kegg_id":"C00246","smiles":"CCCC(O)=O","formula":"C4H8O2","exact_mass":88.0524,"monoisotopic_mass":88.0524,"logp":0.79,"logd":-0.3,"pka":4.82,"psa":37.3,"carbon_count":4,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Organic acids","pathways":["Short chain fatty acid metabolism","Gut microbiome","HDAC inhibition"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["carboxylate"],"synonyms":["Butyric acid","n-Butyric acid","C4:0"]},
+    {"name":"Propionate","hmdb_id":"HMDB0000237","kegg_id":"C00163","smiles":"CCC(O)=O","formula":"C3H6O2","exact_mass":74.0368,"monoisotopic_mass":74.0368,"logp":0.33,"logd":-0.5,"pka":4.87,"psa":37.3,"carbon_count":3,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Organic acids","pathways":["Short chain fatty acid metabolism","Propionate metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["carboxylate"],"synonyms":["Propionic acid","Propanoic acid"]},
+    {"name":"Oxalate","hmdb_id":"HMDB0000784","kegg_id":"C00209","smiles":"OC(=O)C(O)=O","formula":"C2H2O4","exact_mass":89.9852,"monoisotopic_mass":89.9852,"logp":-1.67,"logd":-3.5,"pka":1.25,"psa":74.6,"carbon_count":2,"nitrogen_count":0,"h_bond_donors":2,"h_bond_acceptors":4,"bio_class":"Organic acids","pathways":["Oxalate metabolism","Glyoxylate metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["carboxylate"],"synonyms":["Oxalic acid","Ethanedioic acid"]},
+    {"name":"Formate","hmdb_id":"HMDB0000283","kegg_id":"C00058","smiles":"OC=O","formula":"CH2O2","exact_mass":46.0055,"monoisotopic_mass":46.0055,"logp":-0.54,"logd":-1.5,"pka":3.75,"psa":37.3,"carbon_count":1,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":2,"bio_class":"Organic acids","pathways":["One-carbon metabolism","Formate metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["carboxylate"],"synonyms":["Formic acid","Methanoic acid"]},
 
-    {"name": "Glutamate", "hmdb_id": "HMDB0000148", "kegg_id": "C00025",
-     "smiles": "OC(=O)[C@@H](N)CCC(O)=O", "formula": "C5H9NO4",
-     "exact_mass": 147.0532, "monoisotopic_mass": 147.0532, "logp": -3.69,
-     "logd": -4.5, "pka": 2.10, "psa": 101.8, "carbon_count": 5, "nitrogen_count": 1,
-     "bio_class": "Amino acids", "pathways": ["Glutamate metabolism", "TCA Cycle", "GABA synthesis"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "late",
-     "functional_groups": ["amine", "carboxylate"], "synonyms": ["L-Glutamic acid", "Glu", "E"]},
+    # ─── LIPID METABOLISM ─────────────────────────────────────────────────────────
+    {"name":"Cholesterol","hmdb_id":"HMDB0000067","kegg_id":"C00187","smiles":"[C@@H]1([C@H]2CC[C@H]3[C@@H]([C@@H]2CC1)CC=C4C[C@@H](O)CC[C@]43C)C(C)CCCC(C)C","formula":"C27H46O","exact_mass":386.3549,"monoisotopic_mass":386.3549,"logp":8.74,"logd":7.5,"pka":15.0,"psa":20.2,"carbon_count":27,"nitrogen_count":0,"h_bond_donors":1,"h_bond_acceptors":1,"bio_class":"Sterols","pathways":["Cholesterol metabolism","Steroid synthesis","Bile acid synthesis"],"rp_retention_class":"very_late","hilic_retention_class":"very_early","functional_groups":["hydroxyl","steroid"],"synonyms":["Cholest-5-en-3beta-ol"]},
+    {"name":"Sphinganine","hmdb_id":"HMDB0000269","kegg_id":"C00836","smiles":"CCCCCCCCCCCCCCCC(O)[C@@H](N)CO","formula":"C18H39NO2","exact_mass":301.2981,"monoisotopic_mass":301.2981,"logp":4.54,"logd":3.2,"pka":6.60,"psa":66.5,"carbon_count":18,"nitrogen_count":1,"h_bond_donors":3,"h_bond_acceptors":3,"bio_class":"Sphingolipids","pathways":["Sphingolipid synthesis","Ceramide metabolism"],"rp_retention_class":"late","hilic_retention_class":"early","functional_groups":["amine","hydroxyl"],"synonyms":["Dihydrosphingosine","D-erythro-Sphinganine"]},
 
-    {"name": "Aspartate", "hmdb_id": "HMDB0000191", "kegg_id": "C00049",
-     "smiles": "OC(=O)[C@@H](N)CC(O)=O", "formula": "C4H7NO4",
-     "exact_mass": 133.0375, "monoisotopic_mass": 133.0375, "logp": -3.89,
-     "logd": -4.7, "pka": 1.99, "psa": 101.8, "carbon_count": 4, "nitrogen_count": 1,
-     "bio_class": "Amino acids", "pathways": ["Aspartate metabolism", "Urea cycle", "Purine synthesis"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "late",
-     "functional_groups": ["amine", "carboxylate"]},
+    # ─── ONE-CARBON METABOLISM ────────────────────────────────────────────────────
+    {"name":"S-Adenosylmethionine","hmdb_id":"HMDB0001185","kegg_id":"C00019","smiles":"C[S+](CC[C@H](N)C(O)=O)C[C@H]1O[C@@H](n2cnc3c(N)ncnc23)[C@H](O)[C@@H]1O","formula":"C15H22N6O5S","exact_mass":398.1421,"monoisotopic_mass":398.1421,"logp":-3.43,"logd":-5.2,"pka":2.00,"psa":195.3,"carbon_count":15,"nitrogen_count":6,"h_bond_donors":5,"h_bond_acceptors":11,"bio_class":"Cofactors","pathways":["One-carbon metabolism","Methylation reactions","SAM cycle"],"rp_retention_class":"very_early","hilic_retention_class":"very_late","functional_groups":["sulfonium","amine","carboxylate"],"synonyms":["SAM","AdoMet"]},
+    {"name":"Homocysteine","hmdb_id":"HMDB0000742","kegg_id":"C00155","smiles":"N[C@@H](CCS)C(O)=O","formula":"C4H9NO2S","exact_mass":135.0354,"monoisotopic_mass":135.0354,"logp":-1.54,"logd":-2.5,"pka":2.22,"psa":88.2,"carbon_count":4,"nitrogen_count":1,"h_bond_donors":3,"h_bond_acceptors":3,"bio_class":"Amino acids","pathways":["One-carbon metabolism","Methionine cycle","Cardiovascular risk"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["amine","thiol","carboxylate"],"synonyms":["Hcy","DL-Homocysteine"]},
+    {"name":"Folate","hmdb_id":"HMDB0000121","kegg_id":"C00504","smiles":"Nc1nc2ncc(CNc3ccc(CC(=O)NC(CCC(O)=O)C(O)=O)cc3)nc2c(=O)[nH]1","formula":"C19H19N7O6","exact_mass":441.1398,"monoisotopic_mass":441.1398,"logp":-2.63,"logd":-4.8,"pka":3.50,"psa":210.3,"carbon_count":19,"nitrogen_count":7,"h_bond_donors":6,"h_bond_acceptors":13,"bio_class":"Vitamins","pathways":["One-carbon metabolism","Nucleotide synthesis","Folate cycle"],"rp_retention_class":"early","hilic_retention_class":"late","functional_groups":["pteridine","carboxylate","amine"],"synonyms":["Vitamin B9","Folic acid","Pteroylglutamic acid"]},
 
-    {"name": "Alanine", "hmdb_id": "HMDB0000161", "kegg_id": "C00041",
-     "smiles": "C[C@@H](N)C(O)=O", "formula": "C3H7NO2",
-     "exact_mass": 89.0477, "monoisotopic_mass": 89.0477, "logp": -2.85,
-     "logd": -3.4, "pka": 2.35, "psa": 63.3, "carbon_count": 3, "nitrogen_count": 1,
-     "bio_class": "Amino acids", "pathways": ["Alanine metabolism", "Glycolysis"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "late",
-     "functional_groups": ["amine", "carboxylate"]},
+    # ─── ANTIOXIDANTS ─────────────────────────────────────────────────────────────
+    {"name":"Glutathione","hmdb_id":"HMDB0000125","kegg_id":"C00051","smiles":"N[C@@H](CCC(=O)NC(CS)C(=O)NCC(O)=O)C(O)=O","formula":"C10H17N3O6S","exact_mass":307.0838,"monoisotopic_mass":307.0838,"logp":-3.59,"logd":-5.0,"pka":2.12,"psa":178.6,"carbon_count":10,"nitrogen_count":3,"h_bond_donors":6,"h_bond_acceptors":9,"bio_class":"Antioxidants","pathways":["Glutathione metabolism","Antioxidant defense","Detoxification"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["thiol","amine","carboxylate","amide"],"synonyms":["GSH","L-Glutathione","gamma-Glutamylcysteinylglycine"]},
+    {"name":"Ascorbate","hmdb_id":"HMDB0000044","kegg_id":"C00072","smiles":"OC[C@H](O)[C@H]1OC(=O)C(O)=C1O","formula":"C6H8O6","exact_mass":176.0321,"monoisotopic_mass":176.0321,"logp":-1.85,"logd":-2.8,"pka":4.17,"psa":109.0,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":4,"h_bond_acceptors":6,"bio_class":"Vitamins","pathways":["Ascorbate metabolism","Antioxidant defense","Collagen synthesis"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["enediol","hydroxyl","lactone"],"synonyms":["Vitamin C","L-Ascorbic acid"]},
 
-    {"name": "Serine", "hmdb_id": "HMDB0000187", "kegg_id": "C00065",
-     "smiles": "N[C@@H](CO)C(O)=O", "formula": "C3H7NO3",
-     "exact_mass": 105.0426, "monoisotopic_mass": 105.0426, "logp": -3.07,
-     "logd": -3.7, "pka": 2.21, "psa": 83.6, "carbon_count": 3, "nitrogen_count": 1,
-     "bio_class": "Amino acids", "pathways": ["Serine biosynthesis", "One-carbon metabolism"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "late",
-     "functional_groups": ["amine", "carboxylate", "hydroxyl"]},
-
-    # Nucleotides
-    {"name": "ATP", "hmdb_id": "HMDB0000538", "kegg_id": "C00002",
-     "smiles": "Nc1ncnc2n(cnc12)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OP(O)(O)=O)[C@@H](O)[C@H]1O",
-     "formula": "C10H16N5O13P3", "exact_mass": 506.9957, "monoisotopic_mass": 506.9957,
-     "logp": -3.6, "logd": -7.2, "pka": 1.0, "psa": 290.8, "carbon_count": 10, "nitrogen_count": 5,
-     "bio_class": "Nucleotides", "pathways": ["Purine metabolism", "Energy metabolism"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "very_late",
-     "functional_groups": ["phosphate", "adenine"]},
-
-    {"name": "ADP", "hmdb_id": "HMDB0001341", "kegg_id": "C00008",
-     "smiles": "Nc1ncnc2n(cnc12)[C@@H]1O[C@H](COP(O)(=O)OP(O)(O)=O)[C@@H](O)[C@H]1O",
-     "formula": "C10H15N5O10P2", "exact_mass": 427.0294, "monoisotopic_mass": 427.0294,
-     "logp": -3.2, "logd": -6.4, "pka": 1.1, "psa": 228.8, "carbon_count": 10, "nitrogen_count": 5,
-     "bio_class": "Nucleotides", "pathways": ["Purine metabolism", "Energy metabolism"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "very_late",
-     "functional_groups": ["phosphate", "adenine"]},
-
-    {"name": "NAD+", "hmdb_id": "HMDB0000902", "kegg_id": "C00003",
-     "smiles": "NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP([O-])(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O",
-     "formula": "C21H28N7O14P2", "exact_mass": 663.1091, "monoisotopic_mass": 663.1091,
-     "logp": -3.5, "logd": -7.8, "pka": 0.8, "psa": 330.5, "carbon_count": 21, "nitrogen_count": 7,
-     "bio_class": "Cofactors", "pathways": ["NAD metabolism", "Redox metabolism"],
-     "rp_retention_class": "very_early", "hilic_retention_class": "very_late",
-     "functional_groups": ["nicotinamide", "phosphate"]},
-
-    # Acyl-CoAs
-    {"name": "Acetyl-CoA", "hmdb_id": "HMDB0001206", "kegg_id": "C00024",
-     "smiles": "CC(=O)SCCNC(=O)CCNC(=O)[C@@H](O)C(C)(C)COP(O)(=O)OP(O)(=O)OC[C@H]1O[C@H]([C@H](O)[C@@H]1OP(O)(O)=O)n1cnc2c(N)ncnc12",
-     "formula": "C23H38N7O17P3S", "exact_mass": 809.1257, "monoisotopic_mass": 809.1257,
-     "logp": -3.0, "logd": -7.5, "pka": 0.8, "psa": 370.2, "carbon_count": 23, "nitrogen_count": 7,
-     "bio_class": "Acyl-CoAs", "pathways": ["TCA Cycle", "Fatty acid synthesis", "Acetylation"],
-     "rp_retention_class": "mid", "hilic_retention_class": "very_late",
-     "functional_groups": ["thioester", "phosphate", "CoA"]},
-
-    # Lipids
-    {"name": "Palmitic acid", "hmdb_id": "HMDB0000220", "kegg_id": "C00249",
-     "smiles": "CCCCCCCCCCCCCCCC(O)=O", "formula": "C16H32O2",
-     "exact_mass": 256.2402, "monoisotopic_mass": 256.2402, "logp": 7.17,
-     "logd": 5.1, "pka": 4.75, "psa": 37.3, "carbon_count": 16, "nitrogen_count": 0,
-     "bio_class": "Fatty acids", "pathways": ["Fatty acid metabolism", "Lipid synthesis"],
-     "rp_retention_class": "very_late", "hilic_retention_class": "early",
-     "functional_groups": ["carboxylate"]},
-
-    {"name": "Oleic acid", "hmdb_id": "HMDB0000207", "kegg_id": "C00712",
-     "smiles": "CCCCCCCCC=CCCCCCCCC(O)=O", "formula": "C18H34O2",
-     "exact_mass": 282.2559, "monoisotopic_mass": 282.2559, "logp": 7.64,
-     "logd": 5.5, "pka": 4.77, "psa": 37.3, "carbon_count": 18, "nitrogen_count": 0,
-     "bio_class": "Fatty acids", "pathways": ["Fatty acid metabolism"],
-     "rp_retention_class": "very_late", "hilic_retention_class": "early",
-     "functional_groups": ["carboxylate"]},
+    # ─── SUGAR ALCOHOLS & OTHERS ─────────────────────────────────────────────────
+    {"name":"Myo-inositol","hmdb_id":"HMDB0000211","kegg_id":"C00137","smiles":"O[C@H]1[C@H](O)[C@@H](O)[C@H](O)[C@@H](O)[C@@H]1O","formula":"C6H12O6","exact_mass":180.0634,"monoisotopic_mass":180.0634,"logp":-3.10,"logd":-3.1,"pka":12.5,"psa":121.4,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":6,"h_bond_acceptors":6,"bio_class":"Sugar alcohols","pathways":["Inositol metabolism","PI signaling","Osmolyte regulation"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["hydroxyl"],"synonyms":["Inositol","Cyclohexanehexol"]},
+    {"name":"Sorbitol","hmdb_id":"HMDB0000247","kegg_id":"C00794","smiles":"OC[C@H](O)[C@@H](O)[C@H](O)[C@H](O)CO","formula":"C6H14O6","exact_mass":182.0790,"monoisotopic_mass":182.0790,"logp":-3.34,"logd":-3.3,"pka":13.0,"psa":121.4,"carbon_count":6,"nitrogen_count":0,"h_bond_donors":6,"h_bond_acceptors":6,"bio_class":"Sugar alcohols","pathways":["Polyol pathway","Sorbitol metabolism"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["hydroxyl"],"synonyms":["D-Sorbitol","Glucitol","D-Glucitol"]},
+    {"name":"Betaine","hmdb_id":"HMDB0000043","kegg_id":"C00719","smiles":"C[N+](C)(C)CC([O-])=O","formula":"C5H11NO2","exact_mass":117.0790,"monoisotopic_mass":117.0790,"logp":-4.21,"logd":-4.8,"pka":1.83,"psa":40.1,"carbon_count":5,"nitrogen_count":1,"h_bond_donors":0,"h_bond_acceptors":3,"bio_class":"Organic acids","pathways":["One-carbon metabolism","Choline metabolism","Osmolyte regulation"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["quaternary_amine","carboxylate"],"synonyms":["Glycine betaine","Trimethylglycine","TMG"]},
+    {"name":"Creatine","hmdb_id":"HMDB0000064","kegg_id":"C00300","smiles":"CN(CC(O)=O)C(=N)N","formula":"C4H9N3O2","exact_mass":131.0695,"monoisotopic_mass":131.0695,"logp":-2.63,"logd":-3.8,"pka":2.63,"psa":99.4,"carbon_count":4,"nitrogen_count":3,"h_bond_donors":3,"h_bond_acceptors":5,"bio_class":"Organic acids","pathways":["Creatine metabolism","Energy buffering","ATP regeneration"],"rp_retention_class":"very_early","hilic_retention_class":"late","functional_groups":["guanidinium","carboxylate"],"synonyms":["N-Amidinosarcosine","Methylguanidoacetic acid"]},
+    {"name":"Creatinine","hmdb_id":"HMDB0000562","kegg_id":"C00791","smiles":"CN1CC(=O)NC1=N","formula":"C4H7N3O","exact_mass":113.0589,"monoisotopic_mass":113.0589,"logp":-1.76,"logd":-2.5,"pka":4.83,"psa":76.8,"carbon_count":4,"nitrogen_count":3,"h_bond_donors":1,"h_bond_acceptors":4,"bio_class":"Organic acids","pathways":["Creatine metabolism","Kidney function marker"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["lactam","guanidinium"],"synonyms":["2-Amino-1-methyl-2-imidazolin-4-one"]},
+    {"name":"Uric acid","hmdb_id":"HMDB0000289","kegg_id":"C00366","smiles":"O=C1NC(=O)c2[nH]cnc2N1","formula":"C5H4N4O3","exact_mass":168.0283,"monoisotopic_mass":168.0283,"logp":-1.07,"logd":-3.5,"pka":5.40,"psa":119.0,"carbon_count":5,"nitrogen_count":4,"h_bond_donors":4,"h_bond_acceptors":7,"bio_class":"Purines","pathways":["Purine catabolism","Gout","Antioxidant"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["xanthine","hydroxyl"],"synonyms":["2,6,8-Trioxypurine","Urate"]},
+    {"name":"Hypoxanthine","hmdb_id":"HMDB0000157","kegg_id":"C00262","smiles":"O=c1[nH]cnc2[nH]cnc12","formula":"C5H4N4O","exact_mass":136.0385,"monoisotopic_mass":136.0385,"logp":-1.37,"logd":-2.2,"pka":8.94,"psa":68.4,"carbon_count":5,"nitrogen_count":4,"h_bond_donors":2,"h_bond_acceptors":5,"bio_class":"Purines","pathways":["Purine catabolism","Salvage pathway"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["purine","hydroxyl"],"synonyms":["6-Hydroxypurine","Purin-6(1H)-one"]},
+    {"name":"Xanthine","hmdb_id":"HMDB0000292","kegg_id":"C00385","smiles":"O=c1[nH]c(=O)c2[nH]cnc2[nH]1","formula":"C5H4N4O2","exact_mass":152.0334,"monoisotopic_mass":152.0334,"logp":-1.27,"logd":-3.0,"pka":7.53,"psa":88.1,"carbon_count":5,"nitrogen_count":4,"h_bond_donors":3,"h_bond_acceptors":6,"bio_class":"Purines","pathways":["Purine catabolism","Xanthine oxidase pathway"],"rp_retention_class":"very_early","hilic_retention_class":"mid","functional_groups":["purine","hydroxyl"],"synonyms":["3,7-Dihydro-1H-purine-2,6-dione","2,6-Dioxopurine"]},
 ]
 
 COLUMNS = [
-    # Reverse Phase
-    {"vendor": "Waters", "name": "ACQUITY UPLC BEH C18", "chemistry": "C18", "mode": "RP",
-     "particle_size_um": 1.7, "length_mm": 100, "id_mm": 2.1, "pore_size_angstrom": 130,
-     "max_ph": 12.0, "min_ph": 1.0, "max_temp_c": 90.0, "max_pressure_bar": 1034,
-     "suited_for": ["lipids", "hydrophobic metabolites", "general RP", "drugs"],
-     "retention_params": {"s_factor": 0.52, "logkw_c18": 2.1, "selectivity": "general"},
-     "notes": "Workhorse RP column for metabolomics. Excellent peak shape for broad range of metabolites."},
-
-    {"vendor": "Waters", "name": "ACQUITY UPLC HSS T3", "chemistry": "C18 T3", "mode": "RP",
-     "particle_size_um": 1.8, "length_mm": 100, "id_mm": 2.1, "pore_size_angstrom": 100,
-     "max_ph": 8.0, "min_ph": 1.0, "max_temp_c": 60.0, "max_pressure_bar": 600,
-     "suited_for": ["polar metabolites", "organic acids", "amino acids", "nucleotides"],
-     "retention_params": {"s_factor": 0.48, "logkw_c18": 1.8, "selectivity": "polar_enhanced"},
-     "notes": "Superior retention of polar/ionizable compounds. Trifunctional C18 phase. Gold standard for polar metabolomics."},
-
-    {"vendor": "Waters", "name": "ACQUITY UPLC CSH C18", "chemistry": "CSH C18", "mode": "RP",
-     "particle_size_um": 1.7, "length_mm": 100, "id_mm": 2.1, "pore_size_angstrom": 130,
-     "max_ph": 9.0, "min_ph": 2.0, "max_temp_c": 90.0, "max_pressure_bar": 1034,
-     "suited_for": ["lipidomics", "phospholipids", "sphingolipids", "triglycerides"],
-     "retention_params": {"s_factor": 0.55, "logkw_c18": 2.3, "selectivity": "lipid_optimized"},
-     "notes": "Charged surface hybrid. Recommended for lipidomics. Excellent for phospholipid separation."},
-
-    {"vendor": "Phenomenex", "name": "Kinetex C18", "chemistry": "C18", "mode": "RP",
-     "particle_size_um": 1.7, "length_mm": 100, "id_mm": 2.1, "pore_size_angstrom": 100,
-     "max_ph": 8.0, "min_ph": 1.5, "max_temp_c": 60.0, "max_pressure_bar": 690,
-     "suited_for": ["general metabolomics", "drugs", "lipids"],
-     "retention_params": {"s_factor": 0.50, "logkw_c18": 2.0, "selectivity": "general"},
-     "notes": "Core-shell particle technology. Excellent efficiency and peak shape."},
-
-    {"vendor": "Phenomenex", "name": "Kinetex EVO C18", "chemistry": "EVO C18", "mode": "RP",
-     "particle_size_um": 1.7, "length_mm": 150, "id_mm": 2.1, "pore_size_angstrom": 100,
-     "max_ph": 11.0, "min_ph": 1.5, "max_temp_c": 60.0, "max_pressure_bar": 690,
-     "suited_for": ["lipidomics", "high pH applications", "basic compounds"],
-     "retention_params": {"s_factor": 0.51, "logkw_c18": 2.2, "selectivity": "lipid_optimized"},
-     "notes": "High-pH stable EVO C18. Excellent for lipidomics at pH 9."},
-
-    {"vendor": "Agilent", "name": "ZORBAX RRHD Eclipse Plus C18", "chemistry": "C18", "mode": "RP",
-     "particle_size_um": 1.8, "length_mm": 100, "id_mm": 2.1, "pore_size_angstrom": 95,
-     "max_ph": 9.0, "min_ph": 2.0, "max_temp_c": 60.0, "max_pressure_bar": 600,
-     "suited_for": ["general metabolomics", "pharmaceuticals"],
-     "retention_params": {"s_factor": 0.49, "logkw_c18": 1.9, "selectivity": "general"},
-     "notes": "Reliable dual-endcapped C18. Good batch-to-batch reproducibility."},
-
-    # HILIC Columns
-    {"vendor": "Waters", "name": "ACQUITY UPLC BEH Amide", "chemistry": "Amide HILIC", "mode": "HILIC",
-     "particle_size_um": 1.7, "length_mm": 150, "id_mm": 2.1, "pore_size_angstrom": 130,
-     "max_ph": 9.0, "min_ph": 3.0, "max_temp_c": 60.0, "max_pressure_bar": 1034,
-     "suited_for": ["polar metabolites", "sugars", "nucleotides", "phosphorylated compounds"],
-     "retention_params": {"hilic_logkw": 3.2, "selectivity": "amide_polar"},
-     "notes": "BEH amide HILIC. Excellent for polar metabolites not retained on RP. Complementary to C18."},
-
-    {"vendor": "Merck", "name": "SeQuant ZIC-pHILIC", "chemistry": "Zwitterionic HILIC", "mode": "HILIC",
-     "particle_size_um": 5.0, "length_mm": 150, "id_mm": 2.1, "pore_size_angstrom": 200,
-     "max_ph": 8.0, "min_ph": 3.0, "max_temp_c": 60.0, "max_pressure_bar": 200,
-     "suited_for": ["polar metabolites", "organic acids", "TCA metabolites", "amino acids", "nucleotides"],
-     "retention_params": {"hilic_logkw": 3.5, "selectivity": "zwitterionic"},
-     "notes": "ZIC-pHILIC is the gold standard for polar metabolomics HILIC. Excellent for TCA cycle metabolites. Most widely published HILIC column."},
-
-    {"vendor": "Merck", "name": "SeQuant ZIC-HILIC", "chemistry": "Zwitterionic HILIC", "mode": "HILIC",
-     "particle_size_um": 3.5, "length_mm": 150, "id_mm": 2.1, "pore_size_angstrom": 200,
-     "max_ph": 8.0, "min_ph": 3.0, "max_temp_c": 60.0, "max_pressure_bar": 350,
-     "suited_for": ["glycans", "phosphopeptides", "polar metabolites"],
-     "retention_params": {"hilic_logkw": 3.3, "selectivity": "zwitterionic"},
-     "notes": "Parent ZIC-HILIC. Phosphoproteomics and glycan enrichment. Good for untargeted polar metabolomics."},
-
-    {"vendor": "Phenomenex", "name": "Luna NH2", "chemistry": "Amino HILIC", "mode": "HILIC",
-     "particle_size_um": 3.0, "length_mm": 150, "id_mm": 2.0, "pore_size_angstrom": 100,
-     "max_ph": 7.5, "min_ph": 2.0, "max_temp_c": 60.0, "max_pressure_bar": 300,
-     "suited_for": ["carbohydrates", "sugars", "nucleotides"],
-     "retention_params": {"hilic_logkw": 2.9, "selectivity": "amino"},
-     "notes": "Amino HILIC for carbohydrates and sugars. Not recommended for aldehydes (Schiff base formation)."},
+    {"vendor":"Waters","name":"ACQUITY UPLC BEH C18","chemistry":"C18","mode":"RP","particle_size_um":1.7,"length_mm":100,"id_mm":2.1,"pore_size_angstrom":130,"max_ph":12.0,"min_ph":1.0,"max_temp_c":90.0,"max_pressure_bar":1034,"suited_for":["lipids","hydrophobic metabolites","general RP","drugs"],"retention_params":{"s_factor":0.52,"logkw_c18":2.1,"selectivity":"general"},"notes":"Workhorse RP column. Excellent peak shape for broad range of metabolites."},
+    {"vendor":"Waters","name":"ACQUITY UPLC HSS T3","chemistry":"C18 T3","mode":"RP","particle_size_um":1.8,"length_mm":100,"id_mm":2.1,"pore_size_angstrom":100,"max_ph":8.0,"min_ph":1.0,"max_temp_c":60.0,"max_pressure_bar":600,"suited_for":["polar metabolites","organic acids","amino acids","nucleotides"],"retention_params":{"s_factor":0.48,"logkw_c18":1.8,"selectivity":"polar_enhanced"},"notes":"Superior retention of polar/ionizable compounds. Gold standard for polar metabolomics."},
+    {"vendor":"Waters","name":"ACQUITY UPLC CSH C18","chemistry":"CSH C18","mode":"RP","particle_size_um":1.7,"length_mm":100,"id_mm":2.1,"pore_size_angstrom":130,"max_ph":9.0,"min_ph":2.0,"max_temp_c":90.0,"max_pressure_bar":1034,"suited_for":["lipidomics","phospholipids","sphingolipids","triglycerides"],"retention_params":{"s_factor":0.55,"logkw_c18":2.3,"selectivity":"lipid_optimized"},"notes":"Charged surface hybrid. Recommended for lipidomics."},
+    {"vendor":"Phenomenex","name":"Kinetex C18","chemistry":"C18","mode":"RP","particle_size_um":1.7,"length_mm":100,"id_mm":2.1,"pore_size_angstrom":100,"max_ph":8.0,"min_ph":1.5,"max_temp_c":60.0,"max_pressure_bar":690,"suited_for":["general metabolomics","drugs","lipids"],"retention_params":{"s_factor":0.50,"logkw_c18":2.0,"selectivity":"general"},"notes":"Core-shell particle technology. Excellent efficiency."},
+    {"vendor":"Phenomenex","name":"Kinetex EVO C18","chemistry":"EVO C18","mode":"RP","particle_size_um":1.7,"length_mm":150,"id_mm":2.1,"pore_size_angstrom":100,"max_ph":11.0,"min_ph":1.5,"max_temp_c":60.0,"max_pressure_bar":690,"suited_for":["lipidomics","high pH applications"],"retention_params":{"s_factor":0.51,"logkw_c18":2.2,"selectivity":"lipid_optimized"},"notes":"High-pH stable EVO C18 for lipidomics at pH 9."},
+    {"vendor":"Agilent","name":"ZORBAX RRHD Eclipse Plus C18","chemistry":"C18","mode":"RP","particle_size_um":1.8,"length_mm":100,"id_mm":2.1,"pore_size_angstrom":95,"max_ph":9.0,"min_ph":2.0,"max_temp_c":60.0,"max_pressure_bar":600,"suited_for":["general metabolomics","pharmaceuticals"],"retention_params":{"s_factor":0.49,"logkw_c18":1.9,"selectivity":"general"},"notes":"Reliable dual-endcapped C18."},
+    {"vendor":"Waters","name":"ACQUITY UPLC BEH Amide","chemistry":"Amide HILIC","mode":"HILIC","particle_size_um":1.7,"length_mm":150,"id_mm":2.1,"pore_size_angstrom":130,"max_ph":9.0,"min_ph":3.0,"max_temp_c":60.0,"max_pressure_bar":1034,"suited_for":["polar metabolites","sugars","nucleotides"],"retention_params":{"hilic_logkw":3.2,"selectivity":"amide_polar"},"notes":"BEH amide HILIC for polar metabolites."},
+    {"vendor":"Merck","name":"SeQuant ZIC-pHILIC","chemistry":"Zwitterionic HILIC","mode":"HILIC","particle_size_um":5.0,"length_mm":150,"id_mm":2.1,"pore_size_angstrom":200,"max_ph":8.0,"min_ph":3.0,"max_temp_c":60.0,"max_pressure_bar":200,"suited_for":["polar metabolites","organic acids","TCA metabolites","amino acids","nucleotides"],"retention_params":{"hilic_logkw":3.5,"selectivity":"zwitterionic"},"notes":"ZIC-pHILIC gold standard for polar metabolomics HILIC."},
+    {"vendor":"Merck","name":"SeQuant ZIC-HILIC","chemistry":"Zwitterionic HILIC","mode":"HILIC","particle_size_um":3.5,"length_mm":150,"id_mm":2.1,"pore_size_angstrom":200,"max_ph":8.0,"min_ph":3.0,"max_temp_c":60.0,"max_pressure_bar":350,"suited_for":["glycans","phosphopeptides","polar metabolites"],"retention_params":{"hilic_logkw":3.3,"selectivity":"zwitterionic"},"notes":"Parent ZIC-HILIC for glycan and polar metabolomics."},
+    {"vendor":"Phenomenex","name":"Luna NH2","chemistry":"Amino HILIC","mode":"HILIC","particle_size_um":3.0,"length_mm":150,"id_mm":2.0,"pore_size_angstrom":100,"max_ph":7.5,"min_ph":2.0,"max_temp_c":60.0,"max_pressure_bar":300,"suited_for":["carbohydrates","sugars","nucleotides"],"retention_params":{"hilic_logkw":2.9,"selectivity":"amino"},"notes":"Amino HILIC for carbohydrates and sugars."},
 ]
 
 MOBILE_PHASES = [
-    # RP Mobile Phases
-    {"name": "Water + 0.1% Formic Acid", "solvent_a": "Water", "solvent_b": "Acetonitrile",
-     "additive_a": "0.1% Formic Acid", "additive_b": "0.1% Formic Acid",
-     "ph": 2.7, "buffer_concentration_mm": 0, "ms_compatible": True, "mode": "RP",
-     "notes": "Standard positive mode RP. Good for basic compounds and lipids."},
-
-    {"name": "Water + 10 mM Ammonium Acetate", "solvent_a": "Water", "solvent_b": "Acetonitrile",
-     "additive_a": "10 mM Ammonium Acetate", "additive_b": "10 mM Ammonium Acetate",
-     "ph": 6.8, "buffer_concentration_mm": 10, "ms_compatible": True, "mode": "RP",
-     "notes": "Neutral pH RP. Excellent for organic acids and anionic metabolites. Most common for negative mode metabolomics."},
-
-    {"name": "Water + 10 mM Ammonium Formate", "solvent_a": "Water", "solvent_b": "Acetonitrile",
-     "additive_a": "10 mM Ammonium Formate", "additive_b": "10 mM Ammonium Formate",
-     "ph": 3.0, "buffer_concentration_mm": 10, "ms_compatible": True, "mode": "RP",
-     "notes": "Low pH RP buffer. Good for nucleotides and phosphorylated metabolites. MS compatible."},
-
-    {"name": "Water + 5 mM Ammonium Formate (pH 9)", "solvent_a": "Water", "solvent_b": "Methanol",
-     "additive_a": "5 mM Ammonium Formate pH 9", "additive_b": "5 mM Ammonium Formate pH 9",
-     "ph": 9.0, "buffer_concentration_mm": 5, "ms_compatible": True, "mode": "RP",
-     "notes": "High pH RP for lipidomics (CSH C18). Excellent for phospholipid class separation."},
-
-    # HILIC Mobile Phases
-    {"name": "HILIC: 5 mM Ammonium Acetate + ACN", "solvent_a": "Water + 5 mM Ammonium Acetate",
-     "solvent_b": "Acetonitrile", "additive_a": "5 mM Ammonium Acetate",
-     "additive_b": "None", "ph": 6.8, "buffer_concentration_mm": 5,
-     "ms_compatible": True, "mode": "HILIC",
-     "notes": "Standard HILIC mobile phase. ZIC-pHILIC gold standard combination."},
-
-    {"name": "HILIC: 5 mM Ammonium Formate + ACN", "solvent_a": "Water + 5 mM Ammonium Formate",
-     "solvent_b": "Acetonitrile", "additive_a": "5 mM Ammonium Formate",
-     "additive_b": "None", "ph": 3.5, "buffer_concentration_mm": 5,
-     "ms_compatible": True, "mode": "HILIC",
-     "notes": "Low pH HILIC. Better for protonated species. Used with BEH Amide."},
+    {"name":"Water + 0.1% Formic Acid / ACN","solvent_a":"Water","solvent_b":"Acetonitrile","additive_a":"0.1% Formic Acid","additive_b":"0.1% Formic Acid","ph":2.7,"buffer_concentration_mm":0,"ms_compatible":True,"mode":"RP","notes":"Standard positive mode RP. Good for basic compounds and lipids."},
+    {"name":"Water + 10 mM Ammonium Acetate / ACN","solvent_a":"Water","solvent_b":"Acetonitrile","additive_a":"10 mM Ammonium Acetate","additive_b":"10 mM Ammonium Acetate","ph":6.8,"buffer_concentration_mm":10,"ms_compatible":True,"mode":"RP","notes":"Neutral pH RP. Excellent for organic acids. Most common for negative mode metabolomics."},
+    {"name":"Water + 10 mM Ammonium Formate / ACN","solvent_a":"Water","solvent_b":"Acetonitrile","additive_a":"10 mM Ammonium Formate","additive_b":"10 mM Ammonium Formate","ph":3.0,"buffer_concentration_mm":10,"ms_compatible":True,"mode":"RP","notes":"Low pH RP buffer. Good for nucleotides and phosphorylated metabolites."},
+    {"name":"Water + 5 mM Ammonium Formate pH 9 / MeOH","solvent_a":"Water","solvent_b":"Methanol","additive_a":"5 mM Ammonium Formate pH 9","additive_b":"5 mM Ammonium Formate pH 9","ph":9.0,"buffer_concentration_mm":5,"ms_compatible":True,"mode":"RP","notes":"High pH RP for lipidomics (CSH C18)."},
+    {"name":"HILIC: 5 mM Ammonium Acetate / ACN","solvent_a":"Water + 5 mM Ammonium Acetate","solvent_b":"Acetonitrile","additive_a":"5 mM Ammonium Acetate","additive_b":"None","ph":6.8,"buffer_concentration_mm":5,"ms_compatible":True,"mode":"HILIC","notes":"Standard HILIC mobile phase. ZIC-pHILIC gold standard combination."},
+    {"name":"HILIC: 5 mM Ammonium Formate / ACN","solvent_a":"Water + 5 mM Ammonium Formate","solvent_b":"Acetonitrile","additive_a":"5 mM Ammonium Formate","additive_b":"None","ph":3.5,"buffer_concentration_mm":5,"ms_compatible":True,"mode":"HILIC","notes":"Low pH HILIC. Better for protonated species. Used with BEH Amide."},
 ]
 
 ATOM_MAPPINGS = [
-    {"reaction_id": "R00200", "substrate_name": "Glucose", "product_name": "Pyruvate",
-     "pathway": "Glycolysis",
-     "carbon_map": {"C1": "C3", "C2": "C2", "C3": "C1", "C4": "C3b", "C5": "C2b", "C6": "C1b"},
-     "label_propagation": {"M+6_glucose": ["M+3_pyruvate_x2"], "M+1_C1_glucose": ["M+1_CO2"]}},
-
-    {"reaction_id": "R00351", "substrate_name": "Pyruvate", "product_name": "Acetyl-CoA",
-     "pathway": "Pyruvate Dehydrogenase",
-     "carbon_map": {"C2": "C1_acetyl", "C3": "C2_acetyl", "C1": "CO2"},
-     "label_propagation": {"M+3_pyruvate": ["M+2_acetyl_CoA", "M+1_CO2"]}},
-
-    {"reaction_id": "R00351b", "substrate_name": "Acetyl-CoA", "product_name": "Citrate",
-     "pathway": "TCA Cycle",
-     "carbon_map": {"C1_acetyl": "C1_citrate", "C2_acetyl": "C2_citrate"},
-     "label_propagation": {"M+2_acetyl_CoA": ["M+2_citrate"]}},
-
-    {"reaction_id": "R00709", "substrate_name": "Alpha-Ketoglutarate", "product_name": "Succinate",
-     "pathway": "TCA Cycle",
-     "carbon_map": {"C1": "CO2", "C2": "C1_succinate", "C3": "C2_succinate",
-                    "C4": "C3_succinate", "C5": "C4_succinate"},
-     "label_propagation": {"M+4_aKG": ["M+3_succinate", "M+1_CO2"]}},
-
-    {"reaction_id": "R00268", "substrate_name": "Glutamine", "product_name": "Glutamate",
-     "pathway": "Glutamine metabolism",
-     "carbon_map": {"C1": "C1", "C2": "C2", "C3": "C3", "C4": "C4", "C5": "C5"},
-     "label_propagation": {"M+5_glutamine": ["M+5_glutamate"]}},
+    {"reaction_id":"R00200","substrate_name":"Glucose","product_name":"Pyruvate","pathway":"Glycolysis","carbon_map":{"C1":"C3","C2":"C2","C3":"C1","C4":"C3b","C5":"C2b","C6":"C1b"},"label_propagation":{"M+6_glucose":["M+3_pyruvate_x2"],"M+1_C1_glucose":["M+1_CO2"]}},
+    {"reaction_id":"R00351","substrate_name":"Pyruvate","product_name":"Acetyl-CoA","pathway":"Pyruvate Dehydrogenase","carbon_map":{"C2":"C1_acetyl","C3":"C2_acetyl","C1":"CO2"},"label_propagation":{"M+3_pyruvate":["M+2_acetyl_CoA","M+1_CO2"]}},
+    {"reaction_id":"R00351b","substrate_name":"Acetyl-CoA","product_name":"Citrate","pathway":"TCA Cycle","carbon_map":{"C1_acetyl":"C1_citrate","C2_acetyl":"C2_citrate"},"label_propagation":{"M+2_acetyl_CoA":["M+2_citrate"]}},
+    {"reaction_id":"R00709","substrate_name":"Alpha-Ketoglutarate","product_name":"Succinate","pathway":"TCA Cycle","carbon_map":{"C1":"CO2","C2":"C1_succinate","C3":"C2_succinate","C4":"C3_succinate","C5":"C4_succinate"},"label_propagation":{"M+4_aKG":["M+3_succinate","M+1_CO2"]}},
+    {"reaction_id":"R00268","substrate_name":"Glutamine","product_name":"Glutamate","pathway":"Glutamine metabolism","carbon_map":{"C1":"C1","C2":"C2","C3":"C3","C4":"C4","C5":"C5"},"label_propagation":{"M+5_glutamine":["M+5_glutamate"]}},
+    {"reaction_id":"R00694","substrate_name":"Glutamate","product_name":"Alpha-Ketoglutarate","pathway":"TCA Cycle","carbon_map":{"C1":"C1","C2":"C2","C3":"C3","C4":"C4","C5":"C5"},"label_propagation":{"M+5_glutamate":["M+5_aKG"]}},
+    {"reaction_id":"R01082","substrate_name":"Glucose","product_name":"Lactate","pathway":"Glycolysis/Warburg","carbon_map":{"C1":"C3","C2":"C2","C3":"C1","C4":"C3b","C5":"C2b","C6":"C1b"},"label_propagation":{"M+6_glucose":["M+3_lactate_x2"]}},
 ]
 
 
 def seed_database():
     db = SessionLocal()
     try:
-        # Check if already seeded
         if db.query(Metabolite).count() > 0:
             logger.info("Database already seeded.")
             return
 
-        logger.info("Seeding database with metabolites, columns, and mobile phases...")
+        logger.info("Seeding expanded database...")
 
-        # Seed metabolites
         for m in METABOLITES:
             db.add(Metabolite(**m))
 
-        # Seed columns
         for c in COLUMNS:
             db.add(Column_(**c))
 
-        # Seed mobile phases
         for mp in MOBILE_PHASES:
             db.add(MobilePhase(**mp))
 
-        # Seed atom mappings
         for am in ATOM_MAPPINGS:
             db.add(AtomMapping(**am))
 
-        # Create demo user
         demo_user = User(
             email="demo@vlcms.io",
             hashed_password=pwd_context.hash("demo1234"),
