@@ -1,4 +1,4 @@
-const BASE = (process.env.NEXT_PUBLIC_API_URL || "https://vlcms-platform.onrender.com") + "/api/v1";
+const BASE = "https://vlcms-platform.onrender.com/api/v1";
 
 async function req<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
