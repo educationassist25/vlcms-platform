@@ -70,17 +70,28 @@ def list_metabolites(
     q: Optional[str] = Query(None),
     bio_class: Optional[str] = Query(None),
     pathway: Optional[str] = Query(None),
-    limit: int = Query(50, le=200),
+    limit: int = Query(50, le=500),
     offset: int = 0,
     db: Session = Depends(get_db),
 ):
     query = db.query(Metabolite)
     if q:
-        query = query.filter(Metabolite.name.ilike(f"%{q}%"))
+        # Search name, synonyms, HMDB ID, KEGG ID, formula, bio_class
+        search = f"%{q}%"
+        from sqlalchemy import or_
+        query = query.filter(
+            or_(
+                Metabolite.name.ilike(search),
+                Metabolite.hmdb_id.ilike(search),
+                Metabolite.kegg_id.ilike(search),
+                Metabolite.formula.ilike(search),
+                Metabolite.bio_class.ilike(search),
+            )
+        )
     if bio_class:
         query = query.filter(Metabolite.bio_class == bio_class)
     total = query.count()
-    items = query.offset(offset).limit(limit).all()
+    items = query.order_by(Metabolite.name).offset(offset).limit(limit).all()
     return {
         "total": total,
         "items": [{
@@ -88,8 +99,24 @@ def list_metabolites(
             "exact_mass": m.exact_mass, "hmdb_id": m.hmdb_id, "kegg_id": m.kegg_id,
             "bio_class": m.bio_class, "logp": m.logp, "pathways": m.pathways,
             "smiles": m.smiles, "synonyms": m.synonyms,
+            "carbon_count": m.carbon_count, "pka": m.pka, "psa": m.psa,
         } for m in items]
     }
+
+@router_metabolites.get("/classes")
+def get_classes(db: Session = Depends(get_db)):
+    from sqlalchemy import distinct
+    classes = db.query(distinct(Metabolite.bio_class)).order_by(Metabolite.bio_class).all()
+    return {"classes": [c[0] for c in classes if c[0]]}
+
+@router_metabolites.get("/pathways")
+def get_pathways(db: Session = Depends(get_db)):
+    mets = db.query(Metabolite.pathways).all()
+    paths = set()
+    for m in mets:
+        if m[0]:
+            for p in m[0]: paths.add(p)
+    return {"pathways": sorted(list(paths))}
 
 @router_metabolites.get("/{metabolite_id}")
 def get_metabolite(metabolite_id: str, db: Session = Depends(get_db)):
