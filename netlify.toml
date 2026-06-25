@@ -1,0 +1,10 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NEXT_PUBLIC_API_URL = "https://vlcms-platform.onrender.com"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
