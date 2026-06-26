@@ -1,4 +1,5 @@
-const BASE = "https://vlcms-platform.onrender.com/api/v1";
+const BASE = (process.env.NEXT_PUBLIC_API_URL || "https://vlcms-platform.onrender.com") + "/api/v1";
+
 async function req<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -75,7 +76,7 @@ export interface Column {
 }
 export interface MobilePhase {
   id: string; name: string; solvent_a: string; solvent_b: string;
-  additive_a: string; ph: number; ms_compatible: boolean; mode: string; notes: string;
+  additive_a: string; additive_b?: string; ph: number; ms_compatible: boolean; mode: string; notes: string;
 }
 export interface GradientPoint { time_min: number; pct_b: number; }
 export interface RTResult {
