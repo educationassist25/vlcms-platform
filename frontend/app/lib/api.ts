@@ -56,6 +56,22 @@ export const api = {
   ask: (question: string, context?: Record<string, unknown>) =>
     api.post<{ answer: string; source: string }>("/copilot/ask", { question, context }),
 
+  // ML Optimizer
+  mlColumnSelect: (body: { metabolite_ids: string[]; mode_preference?: string }) =>
+    api.post<{ recommendations: ColumnRec[] }>('/ml/column-select', body),
+  mlGradientOptimize: (body: { metabolite_ids: string[]; column_chemistry: string; mobile_phase_id?: string; max_time_min?: number; ion_mode?: string }) =>
+    api.post<{ optimized_gradients: MLGradient[]; algorithm: string }>('/ml/gradient-optimize', body),
+  mlBufferOptimize: (body: { metabolite_ids: string[]; column_chemistry: string; ion_mode: string; gradient: GradientPoint[] }) =>
+    api.post<BufferResult>('/ml/buffer-optimize', body),
+  mlColumnChemistries: () => api.get<ColumnChemistry[]>('/ml/column-chemistries'),
+
+  // Enrichment
+  enrichSearch: (body: { query?: string; categories?: string[]; sources?: string[]; limit?: number }) =>
+    api.post<{ total: number; results: EnrichMetabolite[] }>('/enrichment/search', body),
+  enrichCategories: () => api.get<{ categories: { name: string; count: number }[] }>('/enrichment/categories'),
+  enrichImport: (body: { query?: string; categories?: string[]; sources?: string[]; limit?: number }) =>
+    api.post<{ imported: number; skipped: number; total_in_db: number }>('/enrichment/import-to-session', body),
+
   // Auth
   demoLogin: () => api.get<{ token: string; user_id: string; email: string; full_name: string }>("/auth/demo"),
 };
@@ -136,3 +152,38 @@ export interface SaveMethodRequest {
   flow_rate_ml_min: number; temperature_c: number; ion_mode: string;
 }
 export interface SavedMethod { id: string; name: string; instrument: string; ion_mode: string; column_id: string; created_at: string; }
+
+// ML & Enrichment Types
+export interface ColumnRec {
+  chemistry: string; mode: string; score: number;
+  best_for: string[]; avoid_for: string[];
+  buffer_recommendation: string; ph_range: [number, number];
+  optimal_flow_ml_min: number; optimal_temp_c: number;
+  recommended_gradient: GradientPoint[];
+  scientific_reasoning: string;
+}
+export interface MLGradient {
+  gradient: GradientPoint[]; total_score: number;
+  predicted_resolution: number; peak_capacity: number;
+  run_time_min: number; n_coelutions_critical: number;
+  optimization_notes: string;
+}
+export interface BufferResult {
+  recommended_buffer: string; ph_recommendation: string;
+  ms_compatible: boolean; solvent_a_composition: string;
+  solvent_b_recommendation: string; buffer_concentration_mm: number;
+  all_buffers_ranked: { name: string; score: number; best_for: string[] }[];
+  optimization_suggestions: string[];
+  gradient_adjustments: string[];
+}
+export interface ColumnChemistry {
+  chemistry: string; mode: string; best_for: string[];
+  avoid_for: string[]; buffer_recommendation: string;
+  ph_range: [number, number]; optimal_flow: number; optimal_temp: number;
+}
+export interface EnrichMetabolite {
+  name: string; formula: string; exact_mass: number;
+  logp?: number; psa?: number; bio_class: string;
+  pathways: string[]; hmdb_id?: string;
+  pubchem_cid?: string; source: string;
+}
