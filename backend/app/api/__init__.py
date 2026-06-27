@@ -536,3 +536,160 @@ mrm = type("mod", (), {"router": router_mrm})()
 isotope = type("mod", (), {"router": router_isotope})()
 methods = type("mod", (), {"router": router_methods})()
 copilot = type("mod", (), {"router": router_copilot})()
+
+
+# ─── ML COLUMN SELECTOR ──────────────────────────────────────────────────────
+router_ml = APIRouter()
+
+class ColumnSelectRequest(BaseModel):
+    metabolite_ids: List[str]
+    mode_preference: str = "auto"
+    application: str = "general"
+
+class GradientOptimizeMLRequest(BaseModel):
+    metabolite_ids: List[str]
+    column_chemistry: str = "C18"
+    mobile_phase_id: Optional[str] = None
+    max_time_min: float = 15.0
+    ion_mode: str = "negative"
+
+class BufferOptimizeRequest(BaseModel):
+    metabolite_ids: List[str]
+    column_chemistry: str = "C18"
+    ion_mode: str = "negative"
+    gradient: List[dict] = []
+
+@router_ml.post("/column-select")
+def ml_column_select(req: ColumnSelectRequest, db: Session = Depends(get_db)):
+    from app.services.ml_optimizer import column_selector
+    mets = []
+    for mid in req.metabolite_ids:
+        m = db.query(Metabolite).filter(Metabolite.id == mid).first()
+        if m:
+            mets.append({"name": m.name, "logp": m.logp, "logd": m.logd,
+                         "psa": m.psa, "bio_class": m.bio_class,
+                         "pathways": m.pathways or []})
+    if not mets:
+        raise HTTPException(status_code=400, detail="No valid metabolites found")
+    recommendations = column_selector.recommend(mets, req.mode_preference, req.application)
+    return {"recommendations": recommendations, "n_metabolites": len(mets)}
+
+@router_ml.post("/gradient-optimize")
+def ml_gradient_optimize(req: GradientOptimizeMLRequest, db: Session = Depends(get_db)):
+    from app.services.ml_optimizer import ml_optimizer
+    mets = []
+    for mid in req.metabolite_ids:
+        m = db.query(Metabolite).filter(Metabolite.id == mid).first()
+        if m:
+            mets.append({"name": m.name, "logp": m.logp, "logd": m.logd,
+                         "psa": m.psa, "bio_class": m.bio_class,
+                         "carbon_count": m.carbon_count})
+    if not mets:
+        raise HTTPException(status_code=400, detail="No valid metabolites found")
+    mp = {}
+    if req.mobile_phase_id:
+        mp_obj = db.query(MobilePhase).filter(MobilePhase.id == req.mobile_phase_id).first()
+        if mp_obj:
+            mp = {"ph": mp_obj.ph, "mode": mp_obj.mode, "name": mp_obj.name}
+    results = ml_optimizer.optimize(
+        mets, req.column_chemistry, mp,
+        {"max_time": req.max_time_min, "ion_mode": req.ion_mode}
+    )
+    return {
+        "column_chemistry": req.column_chemistry,
+        "n_metabolites": len(mets),
+        "optimized_gradients": results,
+        "algorithm": "LSS-QSRR Genetic Algorithm v1.0"
+    }
+
+@router_ml.post("/buffer-optimize")
+def ml_buffer_optimize(req: BufferOptimizeRequest, db: Session = Depends(get_db)):
+    from app.services.ml_optimizer import buffer_optimizer
+    mets = []
+    for mid in req.metabolite_ids:
+        m = db.query(Metabolite).filter(Metabolite.id == mid).first()
+        if m:
+            mets.append({"name": m.name, "logp": m.logp, "pka": m.pka,
+                         "psa": m.psa, "bio_class": m.bio_class})
+    if not mets:
+        raise HTTPException(status_code=400, detail="No valid metabolites found")
+    result = buffer_optimizer.optimize_buffer(mets, req.column_chemistry, req.ion_mode, req.gradient)
+    return result
+
+@router_ml.get("/column-chemistries")
+def list_column_chemistries():
+    from app.services.ml_optimizer import COLUMN_INTELLIGENCE
+    return [{
+        "chemistry": k,
+        "mode": v["mode"],
+        "best_for": v["best_for"],
+        "avoid_for": v["avoid_for"],
+        "buffer_recommendation": v["buffer_recommendation"],
+        "ph_range": v["ph_range"],
+        "optimal_flow": v["optimal_flow"],
+        "optimal_temp": v["optimal_temp"],
+    } for k, v in COLUMN_INTELLIGENCE.items()]
+
+
+# ─── ENRICHMENT ───────────────────────────────────────────────────────────────
+router_enrichment = APIRouter()
+
+class EnrichRequest(BaseModel):
+    query: str = ""
+    categories: List[str] = []
+    sources: List[str] = ["hmdb", "pubchem"]
+    limit: int = 100
+
+@router_enrichment.post("/search")
+async def enrichment_search(req: EnrichRequest):
+    from app.services.enrichment_service import enrich_metabolites
+    result = await enrich_metabolites(req.query, req.categories, req.sources, req.limit)
+    return result
+
+@router_enrichment.get("/categories")
+def enrichment_categories():
+    from app.services.enrichment_service import get_available_categories, CATEGORY_HMDB_MAP
+    cats = get_available_categories()
+    return {"categories": [{"name": c, "count": len(CATEGORY_HMDB_MAP.get(c, []))} for c in cats]}
+
+@router_enrichment.post("/import-to-session")
+async def import_enriched(req: EnrichRequest, db: Session = Depends(get_db)):
+    """Enrich and import metabolites into the local database for simulation."""
+    from app.services.enrichment_service import enrich_metabolites
+    import uuid as _uuid
+    enriched = await enrich_metabolites(req.query, req.categories, req.sources, req.limit)
+    imported = []
+    skipped = []
+    for item in enriched["results"]:
+        name = item.get("name", "")
+        if not name:
+            continue
+        existing = db.query(Metabolite).filter(Metabolite.name == name).first()
+        if existing:
+            skipped.append(name)
+            continue
+        met = Metabolite(
+            id=str(_uuid.uuid4()),
+            name=name,
+            hmdb_id=item.get("hmdb_id", ""),
+            kegg_id=item.get("kegg_id", ""),
+            formula=item.get("formula", ""),
+            exact_mass=item.get("exact_mass", 0.0),
+            logp=item.get("logp"),
+            psa=item.get("psa"),
+            bio_class=item.get("bio_class", "Unknown"),
+            pathways=item.get("pathways", []),
+            synonyms=[],
+            carbon_count=item.get("formula", "").count("C") if item.get("formula") else None,
+            rp_retention_class="early",
+            hilic_retention_class="mid",
+        )
+        db.add(met)
+        imported.append(name)
+    db.commit()
+    return {
+        "imported": len(imported),
+        "skipped": len(skipped),
+        "imported_names": imported,
+        "total_in_db": db.query(Metabolite).count(),
+    }
