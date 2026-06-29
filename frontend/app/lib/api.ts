@@ -19,7 +19,7 @@ export const api = {
 
   metabolites: (q?: string) =>
     api.get<{ total: number; items: Metabolite[] }>(
-      `/metabolites${q ? `?q=${encodeURIComponent(q)}&limit=50` : "?limit=50"}`
+      `/metabolites${q ? `?q=${encodeURIComponent(q)}&limit=200` : "?limit=200"}`
     ),
   metabolite: (id: string) => api.get<Metabolite>(`/metabolites/${id}`),
   columns: (mode?: string) =>
