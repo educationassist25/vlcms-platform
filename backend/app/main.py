@@ -1,5 +1,6 @@
 """
 Virtual LC-MS Platform - FastAPI Backend
+CORS fully open for Netlify + Vercel deployments
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,30 +17,25 @@ from app.models.models import Metabolite, Column_, MobilePhase, AtomMapping, Use
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
-
     from app.db.database import SessionLocal
     db = SessionLocal()
     met_count = db.query(Metabolite).count()
     col_count  = db.query(Column_).count()
     db.close()
-
-    # Force reseed if DB has old/incomplete data
     if met_count < 90 or col_count < 9:
         db2 = SessionLocal()
         try:
-            # Clear all existing data
             db2.query(AtomMapping).delete()
             db2.query(Metabolite).delete()
             db2.query(Column_).delete()
             db2.query(MobilePhase).delete()
             db2.query(User).delete()
             db2.commit()
-        except Exception as e:
+        except Exception:
             db2.rollback()
         finally:
             db2.close()
         seed_database()
-
     yield
 
 
@@ -52,12 +48,15 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
+# CORS — allow all origins so Netlify, Vercel, and localhost all work
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 app.include_router(auth.router,          prefix="/api/v1/auth",          tags=["Auth"])
@@ -85,4 +84,10 @@ def health():
         "version": "1.0.0",
         "metabolites": met_count,
         "columns": col_count,
+        "cors": "open",
     }
+
+
+@app.options("/{full_path:path}")
+async def options_handler():
+    return {"status": "ok"}
