@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from app.db.database import engine, Base
 from app.api import (metabolites, columns, mobile_phases, simulate,
                      mrm, isotope, methods, auth, copilot,
-                     router_ml, router_enrichment)
+                     router_ml, router_enrichment, router_resolver)
 from app.db.seed import seed_database
 from app.models.models import Metabolite, Column_, MobilePhase, AtomMapping, User
 
@@ -71,6 +71,7 @@ app.include_router(methods.router,       prefix="/api/v1/methods",       tags=["
 app.include_router(copilot.router,       prefix="/api/v1/copilot",       tags=["AI Copilot"])
 app.include_router(router_ml,            prefix="/api/v1/ml",            tags=["ML Optimizer"])
 app.include_router(router_enrichment,    prefix="/api/v1/enrichment",    tags=["Enrichment"])
+app.include_router(router_resolver,      prefix="/api/v1/resolver",      tags=["Co-Elution Resolver"])
 
 
 @app.get("/api/health")
