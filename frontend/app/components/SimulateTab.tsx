@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api, type Metabolite, type Column, type MobilePhase, type SimulateResult, type GradientPoint, type RTResult } from "../lib/api";
+import CoElutionResolverPanel from "./CoElutionResolverPanel";
 
 interface Props {
   metabolites: Metabolite[];
@@ -254,7 +255,7 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
   const [result, setResult] = useState<SimulateResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
-  const [activeResultTab, setActiveResultTab] = useState<"chrom"|"peaks"|"mrm"|"resolution"|"suppression">("chrom");
+  const [activeResultTab, setActiveResultTab] = useState<"chrom"|"peaks"|"mrm"|"resolution"|"suppression"|"resolver">("chrom");
 
   // Smart recommendations
   const [colScores, setColScores] = useState<Record<string, number>>({});
@@ -613,6 +614,7 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
                 { id: "peaks", label: "📊 Peak Data" },
                 { id: "mrm", label: `⚡ MRM (${allMRM.length})` },
                 { id: "resolution", label: `🔍 Resolution` },
+                { id: "resolver", label: "🎯 Fix Co-Elutions" },
                 { id: "suppression", label: "🧪 Ion Suppression" },
               ] as { id: typeof activeResultTab; label: string }[]).map(tab => (
                 <button key={tab.id} onClick={() => setActiveResultTab(tab.id)} style={{
@@ -742,6 +744,19 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
                   </div>
                 )}
               </Card>
+            )}
+
+            {/* Co-Elution Resolver */}
+            {activeResultTab === "resolver" && (
+              <CoElutionResolverPanel
+                metaboliteIds={selectedMets}
+                columnId={columnId}
+                mobilePhaseId={mpId}
+                gradient={gradient}
+                flowRate={flowRate}
+                temperature={temp}
+                ionMode={ionMode}
+              />
             )}
 
             {/* Ion Suppression */}
