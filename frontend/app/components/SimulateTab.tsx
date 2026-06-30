@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { api, type Metabolite, type Column, type MobilePhase, type SimulateResult, type GradientPoint } from "../lib/api";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { api, type Metabolite, type Column, type MobilePhase, type SimulateResult, type GradientPoint, type RTResult } from "../lib/api";
 
 interface Props {
   metabolites: Metabolite[];
@@ -9,12 +9,12 @@ interface Props {
   peakColors: string[];
 }
 
-// ─── UI helpers ───────────────────────────────────────────────────────────────
-function Card({ title, children, extra }: { title: string; children: React.ReactNode; extra?: React.ReactNode }) {
+// ── Reusable UI ────────────────────────────────────────────────────────────────
+function Card({ title, children, extra, accent }: { title: string; children: React.ReactNode; extra?: React.ReactNode; accent?: string }) {
   return (
-    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
-      <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{title}</span>
+    <div style={{ background: "var(--bg-card)", border: `1px solid ${accent ? accent + "40" : "var(--border)"}`, borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
+      <div style={{ padding: "9px 14px", borderBottom: `1px solid ${accent ? accent + "30" : "var(--border)"}`, background: accent ? accent + "08" : "transparent", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: accent || "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{title}</span>
         {extra}
       </div>
       <div style={{ padding: 12 }}>{children}</div>
@@ -22,42 +22,42 @@ function Card({ title, children, extra }: { title: string; children: React.React
   );
 }
 
-function Sel({ val, onChange, opts }: { val: string; onChange: (v: string) => void; opts: { value: string; label: string }[] }) {
-  return (
-    <select value={val} onChange={e => onChange(e.target.value)} style={{
-      background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)",
-      padding: "6px 8px", borderRadius: 6, fontSize: 12, width: "100%", cursor: "pointer",
-    }}>
-      {opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  );
+function Badge({ text, color }: { text: string; color: string }) {
+  return <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: color + "22", color, fontWeight: 600 }}>{text}</span>;
 }
 
-// ─── Chromatogram SVG ─────────────────────────────────────────────────────────
+// ── Chromatogram SVG ───────────────────────────────────────────────────────────
 function ChromSVG({ result, peakColors }: { result: SimulateResult; peakColors: string[] }) {
   const W = 700, H = 220, PL = 50, PR = 16, PT = 28, PB = 36;
   const plotW = W - PL - PR, plotH = H - PT - PB;
-  const maxRT = Math.max(...result.results.map(r => r.rt_min)) * 1.2 || 12;
-  const nPts = 700;
+  const maxRT = Math.max(...result.results.map(r => r.rt_min), 1) * 1.18;
+  const nPts = 800;
   const times = Array.from({ length: nPts }, (_, i) => (i / nPts) * maxRT);
+
   const curves = result.results.map(peak => {
-    const sigma = Math.max(peak.peak_width_min / 2.354, 0.005);
-    const t = peak.tailing_factor || 1.1;
+    const sigma = Math.max(peak.peak_width_min / 2.354, 0.004);
+    const t = Math.max(peak.tailing_factor, 1.0);
     return times.map(ti => {
       const dt = ti - peak.rt_min;
       const s = dt > 0 ? sigma * t : sigma;
       return Math.exp(-0.5 * (dt / s) ** 2);
     });
   });
-  const maxI = Math.max(...times.map((_, i) => curves.reduce((s, c) => s + c[i], 0)), 0.01);
+
+  const total = times.map((_, i) => curves.reduce((s, c) => s + c[i], 0));
+  const maxI = Math.max(...total, 0.01);
   const X = (t: number) => PL + (t / maxRT) * plotW;
   const Y = (v: number) => PT + plotH - (v / maxI) * plotH;
   const xTicks = Array.from({ length: 7 }, (_, i) => (i * maxRT) / 6);
+
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
-      {xTicks.map((t, i) => <line key={i} x1={X(t)} y1={PT} x2={X(t)} y2={PT + plotH} stroke="var(--border)" strokeWidth={0.5} strokeDasharray="3 3" />)}
+      {/* Grid */}
+      {xTicks.map((t, i) => <line key={i} x1={X(t)} y1={PT} x2={X(t)} y2={PT + plotH} stroke="var(--border)" strokeWidth={0.4} strokeDasharray="3 3" />)}
       <line x1={PL} y1={PT} x2={PL} y2={PT + plotH} stroke="var(--border-light)" strokeWidth={1} />
       <line x1={PL} y1={PT + plotH} x2={W - PR} y2={PT + plotH} stroke="var(--border-light)" strokeWidth={1} />
+
+      {/* Peak fills + lines */}
       {curves.map((curve, idx) => {
         const color = peakColors[idx % peakColors.length];
         const path = times.map((t, i) => `${i === 0 ? "M" : "L"}${X(t).toFixed(1)},${Y(curve[i]).toFixed(1)}`).join(" ");
@@ -68,6 +68,8 @@ function ChromSVG({ result, peakColors }: { result: SimulateResult; peakColors: 
           </g>
         );
       })}
+
+      {/* Peak labels */}
       {result.results.map((peak, idx) => {
         const color = peakColors[idx % peakColors.length];
         const x = X(peak.rt_min);
@@ -83,6 +85,8 @@ function ChromSVG({ result, peakColors }: { result: SimulateResult; peakColors: 
           </g>
         );
       })}
+
+      {/* X axis */}
       {xTicks.map((t, i) => (
         <g key={i}>
           <line x1={X(t)} y1={PT + plotH} x2={X(t)} y2={PT + plotH + 4} stroke="var(--border-light)" strokeWidth={1} />
@@ -95,172 +99,143 @@ function ChromSVG({ result, peakColors }: { result: SimulateResult; peakColors: 
   );
 }
 
-// ─── Binary Gradient SVG ──────────────────────────────────────────────────────
+// ── Gradient Profile SVG ────────────────────────────────────────────────────────
 function GradientSVG({ gradient }: { gradient: GradientPoint[] }) {
   if (gradient.length < 2) return null;
-  const W = 640, H = 110, PL = 44, PR = 16, PT = 10, PB = 28;
+  const W = 640, H = 100, PL = 44, PR = 12, PT = 8, PB = 26;
   const plotW = W - PL - PR, plotH = H - PT - PB;
   const maxT = Math.max(...gradient.map(g => g.time_min), 1);
   const X = (t: number) => PL + (t / maxT) * plotW;
-  const Ya = (pct: number) => PT + plotH - ((100 - pct) / 100) * plotH; // Solvent A = 100-pctB
-  const Yb = (pct: number) => PT + plotH - (pct / 100) * plotH;        // Solvent B = pctB
-
-  // Build path strings
+  const Yb = (p: number) => PT + plotH - (p / 100) * plotH;
+  const Ya = (p: number) => PT + plotH - ((100 - p) / 100) * plotH;
   const pathB = gradient.map((pt, i) => `${i === 0 ? "M" : "L"}${X(pt.time_min).toFixed(1)},${Yb(pt.pct_b).toFixed(1)}`).join(" ");
   const pathA = gradient.map((pt, i) => `${i === 0 ? "M" : "L"}${X(pt.time_min).toFixed(1)},${Ya(pt.pct_b).toFixed(1)}`).join(" ");
-  const fillB = `${pathB} L${X(maxT)},${PT + plotH} L${X(0)},${PT + plotH} Z`;
-  const fillA = `${pathA} L${X(maxT)},${PT} L${X(0)},${PT} Z`;
-  const xTicks = Array.from({ length: 6 }, (_, i) => (i * maxT) / 5);
   const yTicks = [0, 25, 50, 75, 100];
+  const xTicks = Array.from({ length: 5 }, (_, i) => (i * maxT) / 4);
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
-      {/* Grid */}
       {yTicks.map(v => (
         <g key={v}>
           <line x1={PL} y1={Yb(v)} x2={W - PR} y2={Yb(v)} stroke="var(--border)" strokeWidth={0.4} strokeDasharray="3 3" />
-          <text x={PL - 4} y={Yb(v) + 4} textAnchor="end" fontSize={8} fill="var(--text-muted)" fontFamily="monospace">{v}%</text>
+          <text x={PL - 4} y={Yb(v) + 3} textAnchor="end" fontSize={8} fill="var(--text-muted)" fontFamily="monospace">{v}%</text>
         </g>
       ))}
       {xTicks.map((t, i) => (
-        <g key={i}>
-          <line x1={X(t)} y1={PT} x2={X(t)} y2={PT + plotH} stroke="var(--border)" strokeWidth={0.4} strokeDasharray="3 3" />
-          <text x={X(t)} y={PT + plotH + 12} textAnchor="middle" fontSize={8} fill="var(--text-muted)" fontFamily="monospace">{t.toFixed(1)}</text>
-        </g>
+        <text key={i} x={X(t)} y={PT + plotH + 14} textAnchor="middle" fontSize={8} fill="var(--text-muted)" fontFamily="monospace">{t.toFixed(1)}</text>
       ))}
-      {/* Axes */}
       <line x1={PL} y1={PT} x2={PL} y2={PT + plotH} stroke="var(--border-light)" strokeWidth={1} />
       <line x1={PL} y1={PT + plotH} x2={W - PR} y2={PT + plotH} stroke="var(--border-light)" strokeWidth={1} />
-
-      {/* Solvent A fill (blue, aqueous) */}
-      <path d={fillA} fill="#378ADD" fillOpacity={0.12} />
-      <path d={pathA} stroke="#378ADD" strokeWidth={1.5} fill="none" strokeDasharray="5 3" />
-
-      {/* Solvent B fill (amber, organic) */}
-      <path d={fillB} fill="#ffb347" fillOpacity={0.18} />
+      {/* Solvent A fill */}
+      <path d={`${pathA} L${X(maxT)},${PT} L${X(0)},${PT} Z`} fill="#4d9fff" fillOpacity={0.12} />
+      <path d={pathA} stroke="#4d9fff" strokeWidth={1.5} fill="none" strokeDasharray="5 3" />
+      {/* Solvent B fill */}
+      <path d={`${pathB} L${X(maxT)},${PT + plotH} L${X(0)},${PT + plotH} Z`} fill="#ffb347" fillOpacity={0.2} />
       <path d={pathB} stroke="#ffb347" strokeWidth={2} fill="none" />
-
-      {/* Data points */}
       {gradient.map((pt, i) => (
         <g key={i}>
-          <circle cx={X(pt.time_min)} cy={Yb(pt.pct_b)} r={3.5} fill="#ffb347" stroke="var(--bg-card)" strokeWidth={1} />
-          <circle cx={X(pt.time_min)} cy={Ya(pt.pct_b)} r={3} fill="#378ADD" stroke="var(--bg-card)" strokeWidth={1} />
+          <circle cx={X(pt.time_min)} cy={Yb(pt.pct_b)} r={3.5} fill="#ffb347" stroke="var(--bg-card)" strokeWidth={1.5} />
+          <circle cx={X(pt.time_min)} cy={Ya(pt.pct_b)} r={2.5} fill="#4d9fff" stroke="var(--bg-card)" strokeWidth={1} />
         </g>
       ))}
-
       {/* Legend */}
-      <rect x={PL + 4} y={PT + 2} width={8} height={8} fill="#378ADD" fillOpacity={0.7} rx={1} />
-      <text x={PL + 16} y={PT + 10} fontSize={9} fill="#378ADD" fontWeight={600}>Solvent A (aqueous)</text>
-      <rect x={PL + 120} y={PT + 2} width={8} height={8} fill="#ffb347" fillOpacity={0.9} rx={1} />
-      <text x={PL + 132} y={PT + 10} fontSize={9} fill="#ffb347" fontWeight={600}>Solvent B (organic)</text>
-
+      <rect x={PL + 4} y={PT + 2} width={8} height={5} fill="#4d9fff" rx={1} />
+      <text x={PL + 16} y={PT + 8} fontSize={9} fill="#4d9fff" fontWeight={600}>%A Aqueous</text>
+      <rect x={PL + 90} y={PT + 2} width={8} height={5} fill="#ffb347" rx={1} />
+      <text x={PL + 102} y={PT + 8} fontSize={9} fill="#ffb347" fontWeight={600}>%B Organic</text>
       <text x={W / 2} y={H - 2} textAnchor="middle" fontSize={8} fill="var(--text-muted)">Time (min)</text>
     </svg>
   );
 }
 
-// ─── ML Gradient Optimizer ────────────────────────────────────────────────────
-function GradientOptimizer({ metabolites, columnId, mpId, onApply }: {
-  metabolites: Metabolite[];
-  columnId: string;
-  mpId: string;
-  onApply: (grad: GradientPoint[]) => void;
+// ── Dynamic Column Card ─────────────────────────────────────────────────────────
+function ColumnCard({ column, selected, onSelect, score }: {
+  column: Column; selected: boolean; onSelect: () => void; score?: number;
 }) {
-  const [optimizing, setOptimizing] = useState(false);
-  const [suggestions, setSuggestions] = useState<{ rank: number; gradient: GradientPoint[]; n_coelutions_critical: number; label: string }[]>([]);
-
-  const optimize = async () => {
-    if (!metabolites.length || !columnId || !mpId) return;
-    setOptimizing(true);
-    setSuggestions([]);
-    try {
-      const res = await api.optimizeGradient({
-        metabolite_ids: metabolites.slice(0, 8).map(m => m.id),
-        column_id: columnId,
-        mobile_phase_id: mpId,
-        gradient: [{ time_min: 0, pct_b: 5 }, { time_min: 10, pct_b: 95 }],
-        flow_rate_ml_min: 0.4,
-        temperature_c: 40,
-        ion_mode: "negative",
-        instrument: "Agilent 6495D",
-      });
-      const labels = ["🥇 Best resolution", "🥈 Balanced speed/resolution", "🥉 Fastest gradient", "🔬 Step gradient"];
-      setSuggestions(res.optimized_gradients.slice(0, 4).map((g, i) => ({
-        rank: g.rank,
-        gradient: g.gradient,
-        n_coelutions_critical: g.n_coelutions_critical,
-        label: labels[i] || `Option ${i + 1}`,
-      })));
-    } catch (e) {
-      console.error(e);
-    } finally { setOptimizing(false); }
-  };
-
+  const modeColor = column.mode === "HILIC" ? "#4d9fff" : column.mode === "RP" ? "#00d4a4" : "#ffb347";
   return (
-    <div>
-      <button onClick={optimize} disabled={optimizing} style={{
-        width: "100%", padding: "8px 0", marginBottom: 10,
-        background: optimizing ? "var(--border)" : "linear-gradient(135deg, #b48cff, #7c4dff)",
-        color: "#fff", border: "none", borderRadius: 7, fontSize: 12, fontWeight: 700,
-        cursor: optimizing ? "not-allowed" : "pointer",
-      }}>
-        {optimizing ? "⏳ ML Optimizing…" : "🤖 Auto-Optimize Gradient (ML)"}
-      </button>
-
-      {suggestions.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {suggestions.map((s, i) => (
-            <div key={i} style={{
-              padding: "8px 10px", borderRadius: 8,
-              background: i === 0 ? "var(--accent-dim)" : "var(--bg-secondary)",
-              border: `1px solid ${i === 0 ? "var(--accent)50" : "var(--border)"}`,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: i === 0 ? "var(--accent)" : "var(--text-primary)" }}>{s.label}</span>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{
-                    fontSize: 10, padding: "1px 6px", borderRadius: 4, fontWeight: 600,
-                    background: s.n_coelutions_critical === 0 ? "var(--green-dim)" : "var(--amber-dim)",
-                    color: s.n_coelutions_critical === 0 ? "var(--green)" : "var(--amber)",
-                  }}>
-                    {s.n_coelutions_critical === 0 ? "✓ No critical co-elutions" : `⚠ ${s.n_coelutions_critical} co-elutions`}
-                  </span>
-                  <button onClick={() => onApply(s.gradient)} style={{
-                    fontSize: 10, padding: "2px 8px", borderRadius: 4, cursor: "pointer",
-                    background: "var(--accent)", border: "none", color: "#0f1117", fontWeight: 700,
-                  }}>Apply</button>
-                </div>
-              </div>
-              {/* Mini gradient preview */}
-              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                {s.gradient.map((pt, j) => (
-                  <span key={j} style={{ fontSize: 9, fontFamily: "monospace", color: "var(--text-muted)" }}>
-                    {pt.time_min}min:{pt.pct_b}%B
-                    {j < s.gradient.length - 1 && " →"}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
+    <div onClick={onSelect} style={{
+      padding: "10px 12px", borderRadius: 8, cursor: "pointer", transition: "all 0.15s",
+      background: selected ? modeColor + "15" : "var(--bg-secondary)",
+      border: `1.5px solid ${selected ? modeColor : "var(--border)"}`,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: selected ? modeColor : "var(--border-light)" }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: selected ? modeColor : "var(--text-primary)" }}>{column.name}</span>
+        </div>
+        {score !== undefined && (
+          <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: modeColor + "22", color: modeColor, fontWeight: 700 }}>
+            {(score * 100).toFixed(0)}% match
+          </span>
+        )}
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <Badge text={column.mode} color={modeColor} />
+        <Badge text={column.vendor} color="var(--text-muted)" />
+        <Badge text={`${column.particle_size_um}μm`} color="var(--text-muted)" />
+        <Badge text={`${column.length_mm}×${column.id_mm}mm`} color="var(--text-muted)" />
+      </div>
+      {selected && (
+        <div style={{ marginTop: 6, fontSize: 10, color: modeColor, opacity: 0.8 }}>
+          ✓ Best for: {(column.suited_for || []).slice(0, 3).join(" · ")}
         </div>
       )}
     </div>
   );
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
+// ── Dynamic Mobile Phase Card ───────────────────────────────────────────────────
+function MobilePhaseCard({ mp, selected, onSelect, recommended }: {
+  mp: MobilePhase; selected: boolean; onSelect: () => void; recommended?: boolean;
+}) {
+  return (
+    <div onClick={onSelect} style={{
+      padding: "10px 12px", borderRadius: 8, cursor: "pointer", transition: "all 0.15s",
+      background: selected ? "var(--accent-dim)" : "var(--bg-secondary)",
+      border: `1.5px solid ${selected ? "var(--accent)" : recommended ? "var(--accent)40" : "var(--border)"}`,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: selected ? "var(--accent)" : "var(--text-primary)" }}>{mp.name}</span>
+        <div style={{ display: "flex", gap: 4 }}>
+          {recommended && <Badge text="AI Recommended" color="var(--accent)" />}
+          {mp.ms_compatible && <Badge text="MS ✓" color="var(--green)" />}
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <div style={{ padding: "5px 8px", background: "#4d9fff15", border: "1px solid #4d9fff30", borderRadius: 6 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "#4d9fff", marginBottom: 2 }}>▲ SOLVENT A</div>
+          <div style={{ fontSize: 11, color: "var(--text-primary)" }}>{mp.solvent_a}</div>
+          {mp.additive_a && <div style={{ fontSize: 10, color: "#4d9fff", marginTop: 1 }}>{mp.additive_a}</div>}
+        </div>
+        <div style={{ padding: "5px 8px", background: "#ffb34715", border: "1px solid #ffb34730", borderRadius: 6 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "#ffb347", marginBottom: 2 }}>▲ SOLVENT B</div>
+          <div style={{ fontSize: 11, color: "var(--text-primary)" }}>{mp.solvent_b}</div>
+          {mp.additive_b && mp.additive_b !== "None" && <div style={{ fontSize: 10, color: "#ffb347", marginTop: 1 }}>{mp.additive_b}</div>}
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 5 }}>
+        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>pH {mp.ph}</span>
+        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{mp.mode} mode</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ──────────────────────────────────────────────────────────────
 const BIO_CLASSES = ["All","Organic acids","Amino acids","Nucleotides","Carbohydrates","Fatty acids","Acyl-CoAs","Cofactors","Phosphorylated sugars","Neurotransmitters","Bile acids","Eicosanoids","Vitamins","Antioxidants","Purines","Sterols","Sugar alcohols","Sphingolipids"];
 
 const GRADIENT_PRESETS = [
-  { label: "RP 10min", grad: [{time_min:0,pct_b:5},{time_min:1,pct_b:5},{time_min:8,pct_b:95},{time_min:10,pct_b:95},{time_min:10.5,pct_b:5},{time_min:12,pct_b:5}] },
-  { label: "RP 20min", grad: [{time_min:0,pct_b:2},{time_min:2,pct_b:2},{time_min:16,pct_b:98},{time_min:18,pct_b:98},{time_min:18.5,pct_b:2},{time_min:20,pct_b:2}] },
+  { label: "RP Standard", grad: [{time_min:0,pct_b:5},{time_min:1,pct_b:5},{time_min:9,pct_b:95},{time_min:11,pct_b:95},{time_min:11.5,pct_b:5},{time_min:13,pct_b:5}] },
+  { label: "RP Fast", grad: [{time_min:0,pct_b:5},{time_min:6,pct_b:95},{time_min:7,pct_b:95},{time_min:7.5,pct_b:5},{time_min:9,pct_b:5}] },
+  { label: "RP Long", grad: [{time_min:0,pct_b:2},{time_min:2,pct_b:2},{time_min:18,pct_b:98},{time_min:20,pct_b:98},{time_min:20.5,pct_b:2},{time_min:22,pct_b:2}] },
   { label: "HILIC", grad: [{time_min:0,pct_b:90},{time_min:2,pct_b:90},{time_min:14,pct_b:40},{time_min:16,pct_b:40},{time_min:16.5,pct_b:90},{time_min:18,pct_b:90}] },
-  { label: "Step", grad: [{time_min:0,pct_b:5},{time_min:3,pct_b:5},{time_min:3.1,pct_b:30},{time_min:6,pct_b:30},{time_min:6.1,pct_b:70},{time_min:9,pct_b:70},{time_min:9.1,pct_b:95},{time_min:11,pct_b:95},{time_min:11.5,pct_b:5},{time_min:13,pct_b:5}] },
-  { label: "Lipidomics", grad: [{time_min:0,pct_b:60},{time_min:2,pct_b:80},{time_min:12,pct_b:99},{time_min:14,pct_b:99},{time_min:14.5,pct_b:60},{time_min:16,pct_b:60}] },
-  { label: "Isocratic", grad: [{time_min:0,pct_b:50},{time_min:10,pct_b:50}] },
+  { label: "Lipidomics", grad: [{time_min:0,pct_b:60},{time_min:2,pct_b:85},{time_min:12,pct_b:99},{time_min:14,pct_b:99},{time_min:14.5,pct_b:60},{time_min:16,pct_b:60}] },
+  { label: "Step", grad: [{time_min:0,pct_b:5},{time_min:3,pct_b:5},{time_min:3.1,pct_b:35},{time_min:6,pct_b:35},{time_min:6.1,pct_b:70},{time_min:9,pct_b:70},{time_min:9.1,pct_b:95},{time_min:11,pct_b:95},{time_min:11.5,pct_b:5},{time_min:13,pct_b:5}] },
 ];
 
 export default function SimulateTab({ metabolites, columns, mobilePhases, peakColors }: Props) {
+  // Selections
   const [selectedMets, setSelectedMets] = useState<string[]>([]);
   const [columnId, setColumnId] = useState(columns[0]?.id || "");
   const [mpId, setMpId] = useState(mobilePhases[0]?.id || "");
@@ -269,32 +244,123 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
   const [flowRate, setFlowRate] = useState(0.4);
   const [temp, setTemp] = useState(40);
   const [gradient, setGradient] = useState<GradientPoint[]>(GRADIENT_PRESETS[0].grad);
+  const [includeMRM, setIncludeMRM] = useState(true);
+
+  // Search / filter
+  const [search, setSearch] = useState("");
+  const [bioClass, setBioClass] = useState("All");
+
+  // Results
   const [result, setResult] = useState<SimulateResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [bioClass, setBioClass] = useState("All");
-  const [includeMRM, setIncludeMRM] = useState(true);
   const [activeResultTab, setActiveResultTab] = useState<"chrom"|"peaks"|"mrm"|"resolution"|"suppression">("chrom");
+
+  // Smart recommendations
+  const [colScores, setColScores] = useState<Record<string, number>>({});
+  const [recommendedMpId, setRecommendedMpId] = useState("");
+  const [mlGradients, setMlGradients] = useState<{gradient: GradientPoint[]; total_score: number; optimization_notes: string; n_coelutions_critical: number}[]>([]);
+  const [optimizing, setOptimizing] = useState(false);
+  const [bufferSuggestions, setBufferSuggestions] = useState<string[]>([]);
 
   const currentCol = columns.find(c => c.id === columnId);
   const currentMp = mobilePhases.find(m => m.id === mpId);
 
+  // ── Dynamic smart recommendations when analytes change ──────────────────────
+  useEffect(() => {
+    if (selectedMets.length === 0) {
+      setColScores({}); setRecommendedMpId(""); setBufferSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        // ML column recommendation
+        const colRes = await api.mlColumnSelect({ metabolite_ids: selectedMets, mode_preference: "auto" });
+        const scores: Record<string, number> = {};
+        colRes.recommendations.forEach(rec => {
+          columns.forEach(col => {
+            if (col.chemistry?.toLowerCase().includes(rec.chemistry.toLowerCase()) ||
+                rec.chemistry.toLowerCase().includes(col.chemistry?.toLowerCase() || "")) {
+              scores[col.id] = Math.max(scores[col.id] || 0, rec.score);
+            }
+          });
+        });
+        setColScores(scores);
+
+        // Auto-select best column
+        if (colRes.recommendations.length > 0) {
+          const bestChem = colRes.recommendations[0].chemistry;
+          const bestCol = columns.find(c =>
+            c.chemistry?.toLowerCase().includes(bestChem.toLowerCase()) ||
+            bestChem.toLowerCase().includes(c.chemistry?.toLowerCase() || "")
+          );
+          if (bestCol) setColumnId(bestCol.id);
+        }
+
+        // Buffer recommendation
+        const bufRes = await api.mlBufferOptimize({
+          metabolite_ids: selectedMets,
+          column_chemistry: colRes.recommendations[0]?.chemistry || "C18",
+          ion_mode: ionMode,
+          gradient,
+        });
+        setBufferSuggestions(bufRes.optimization_suggestions || []);
+
+        // Auto-select best mobile phase
+        const bestBuf = bufRes.recommended_buffer;
+        const bestMp = mobilePhases.find(mp =>
+          mp.name.toLowerCase().includes(bestBuf.split(" ")[0].toLowerCase()) ||
+          bestBuf.toLowerCase().includes(mp.solvent_a?.toLowerCase() || "")
+        );
+        if (bestMp) { setMpId(bestMp.id); setRecommendedMpId(bestMp.id); }
+      } catch {}
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [selectedMets, ionMode]);
+
+  // ── Dynamic gradient optimization when column/mobile phase changes ───────────
+  useEffect(() => {
+    if (selectedMets.length === 0 || !currentCol) return;
+    const timer = setTimeout(async () => {
+      setOptimizing(true);
+      try {
+        const res = await api.mlGradientOptimize({
+          metabolite_ids: selectedMets,
+          column_chemistry: currentCol.chemistry || "C18",
+          mobile_phase_id: mpId,
+          max_time_min: currentCol.mode === "HILIC" ? 18 : 13,
+          ion_mode: ionMode,
+        });
+        setMlGradients(res.optimized_gradients || []);
+        // Auto-apply best gradient
+        if (res.optimized_gradients?.length > 0) {
+          setGradient(res.optimized_gradients[0].gradient);
+        }
+      } catch {} finally { setOptimizing(false); }
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [columnId, mpId, ionMode]);
+
+  // ── Auto-run simulation when key params change ────────────────────────────────
+  const autoRunTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (selectedMets.length === 0 || !columnId || !mpId) return;
+    if (autoRunTimer.current) clearTimeout(autoRunTimer.current);
+    autoRunTimer.current = setTimeout(() => { runSim(); }, 1500);
+    return () => { if (autoRunTimer.current) clearTimeout(autoRunTimer.current); };
+  }, [gradient, columnId, mpId, flowRate, temp, ionMode, selectedMets]);
+
   const filtered = metabolites.filter(m => {
     const q = search.toLowerCase();
-    const matchSearch = !q || m.name.toLowerCase().includes(q) ||
-      (m.hmdb_id || "").toLowerCase().includes(q) ||
-      (m.formula || "").toLowerCase().includes(q) ||
-      (m.synonyms || []).some(s => s.toLowerCase().includes(q));
-    const matchClass = bioClass === "All" || m.bio_class === bioClass;
-    return matchSearch && matchClass;
+    return (!q || m.name.toLowerCase().includes(q) || (m.hmdb_id||"").toLowerCase().includes(q) || (m.formula||"").toLowerCase().includes(q) || (m.synonyms||[]).some(s => s.toLowerCase().includes(q))) &&
+           (bioClass === "All" || m.bio_class === bioClass);
   });
 
   const toggle = (id: string) => setSelectedMets(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
-  const runSim = async () => {
-    if (!selectedMets.length) { setError("Select at least one metabolite."); return; }
-    setRunning(true); setError(""); setResult(null);
+  const runSim = useCallback(async () => {
+    if (!selectedMets.length || !columnId || !mpId) return;
+    setRunning(true); setError("");
     try {
       const res = await api.simulate({
         metabolite_ids: selectedMets, column_id: columnId, mobile_phase_id: mpId,
@@ -306,14 +372,18 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Simulation failed");
     } finally { setRunning(false); }
-  };
+  }, [selectedMets, columnId, mpId, gradient, flowRate, temp, ionMode, instrument, includeMRM]);
 
   const riskColor = (level: string) => ({ none: "#57d9a3", low: "#00d4a4", medium: "#ffb347", high: "#ff6b6b", critical: "#ff2d55" }[level] || "#888");
+  const allMRM = result?.results.flatMap(r => r.mrm_transitions || []) || [];
 
-  const allMRMTransitions = result?.results.flatMap(r => r.mrm_transitions || []) || [];
+  // Sort columns by score
+  const sortedColumns = [...columns].sort((a, b) => (colScores[b.id] || 0) - (colScores[a.id] || 0));
+  // Filter mobile phases by column mode
+  const filteredMps = currentCol ? mobilePhases.filter(mp => !mp.mode || mp.mode === currentCol.mode || mp.mode === "RP") : mobilePhases;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "310px 1fr", gap: 14, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 14, alignItems: "start" }}>
 
       {/* ══ LEFT PANEL ══ */}
       <div>
@@ -324,26 +394,16 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
             <button onClick={() => setSelectedMets([])} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, cursor: "pointer", background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}>Clear</button>
           </div>
         }>
-          <input placeholder="Search name / HMDB / formula / synonym…" value={search} onChange={e => setSearch(e.target.value)} style={{
-            width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)",
-            padding: "7px 10px", borderRadius: 6, fontSize: 12, marginBottom: 6,
-          }} />
-          <select value={bioClass} onChange={e => setBioClass(e.target.value)} style={{
-            width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)",
-            padding: "6px 8px", borderRadius: 6, fontSize: 12, marginBottom: 8,
-          }}>
+          <input placeholder="Search name / HMDB / formula…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)", padding: "7px 10px", borderRadius: 6, fontSize: 12, marginBottom: 6 }} />
+          <select value={bioClass} onChange={e => setBioClass(e.target.value)} style={{ width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)", padding: "6px 8px", borderRadius: 6, fontSize: 12, marginBottom: 8 }}>
             {BIO_CLASSES.map(c => <option key={c}>{c}</option>)}
           </select>
-          <div style={{ maxHeight: 250, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ maxHeight: 240, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
             {filtered.map(m => {
               const checked = selectedMets.includes(m.id);
               const color = checked ? peakColors[selectedMets.indexOf(m.id) % peakColors.length] : "var(--border-light)";
               return (
-                <button key={m.id} onClick={() => toggle(m.id)} style={{
-                  display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 6,
-                  background: checked ? color + "18" : "transparent", border: `1px solid ${checked ? color + "50" : "transparent"}`,
-                  cursor: "pointer", textAlign: "left",
-                }}>
+                <button key={m.id} onClick={() => toggle(m.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 6, background: checked ? color + "18" : "transparent", border: `1px solid ${checked ? color + "50" : "transparent"}`, cursor: "pointer", textAlign: "left" }}>
                   <div style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, color: checked ? color : "var(--text-primary)", fontWeight: checked ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
@@ -353,167 +413,168 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
               );
             })}
           </div>
-          <div style={{ marginTop: 6, fontSize: 10, color: "var(--text-muted)" }}>{filtered.length}/{metabolites.length} metabolites shown</div>
+          <div style={{ marginTop: 6, fontSize: 10, color: "var(--text-muted)" }}>{filtered.length}/{metabolites.length} metabolites</div>
         </Card>
 
-        {/* Column */}
-        <Card title="LC Column">
-          <Sel val={columnId} onChange={setColumnId} opts={columns.map(c => ({ value: c.id, label: `${c.vendor} ${c.name}` }))} />
-          {currentCol && (
-            <div style={{ marginTop: 8, padding: "8px 10px", background: "var(--bg-secondary)", borderRadius: 6, fontSize: 11 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 4 }}>
-                <div style={{ color: "var(--text-muted)" }}>Mode: <span style={{ color: "var(--text-primary)" }}>{currentCol.mode}</span></div>
-                <div style={{ color: "var(--text-muted)" }}>Size: <span style={{ color: "var(--text-primary)" }}>{currentCol.particle_size_um}μm</span></div>
-                <div style={{ color: "var(--text-muted)" }}>Dim: <span style={{ color: "var(--text-primary)" }}>{currentCol.length_mm}×{currentCol.id_mm}</span></div>
-              </div>
-              <div style={{ color: "var(--text-muted)" }}>Chemistry: <span style={{ color: "var(--text-primary)" }}>{currentCol.chemistry}</span></div>
-              <div style={{ marginTop: 4, color: "var(--accent)", fontSize: 10 }}>✓ {(currentCol.suited_for || []).slice(0, 3).join(" · ")}</div>
+        {/* Dynamic Column Selection */}
+        <Card title="LC Column Selection" accent="#00d4a4" extra={
+          Object.keys(colScores).length > 0 ? <Badge text="AI Scored" color="var(--accent)" /> : undefined
+        }>
+          {Object.keys(colScores).length > 0 && (
+            <div style={{ padding: "6px 10px", background: "var(--accent-dim)", borderRadius: 6, marginBottom: 8, fontSize: 11, color: "var(--accent)" }}>
+              🤖 Columns ranked by ML model based on your analyte panel
             </div>
           )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 280, overflowY: "auto" }}>
+            {sortedColumns.map(col => (
+              <ColumnCard key={col.id} column={col} selected={columnId === col.id} onSelect={() => setColumnId(col.id)} score={colScores[col.id]} />
+            ))}
+          </div>
         </Card>
 
-        {/* Mobile Phase A + B */}
-        <Card title="Mobile Phase (Binary)">
-          <Sel val={mpId} onChange={setMpId} opts={mobilePhases.map(m => ({ value: m.id, label: m.name }))} />
-          {currentMp && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-              <div style={{ padding: "8px 10px", background: "#378ADD18", border: "1px solid #378ADD40", borderRadius: 8 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#4d9fff", marginBottom: 4, letterSpacing: "0.05em" }}>▲ SOLVENT A (Aqueous)</div>
-                <div style={{ fontSize: 12, color: "var(--text-primary)", fontWeight: 500 }}>{currentMp.solvent_a}</div>
-                {currentMp.additive_a && currentMp.additive_a !== "None" && (
-                  <div style={{ fontSize: 10, color: "#4d9fff", marginTop: 3 }}>{currentMp.additive_a}</div>
-                )}
-                <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>pH {currentMp.ph}</div>
-              </div>
-              <div style={{ padding: "8px 10px", background: "#ffb34718", border: "1px solid #ffb34740", borderRadius: 8 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#ffb347", marginBottom: 4, letterSpacing: "0.05em" }}>▲ SOLVENT B (Organic)</div>
-                <div style={{ fontSize: 12, color: "var(--text-primary)", fontWeight: 500 }}>{currentMp.solvent_b}</div>
-                {currentMp.additive_b && currentMp.additive_b !== "None" && (
-                  <div style={{ fontSize: 10, color: "#ffb347", marginTop: 3 }}>{currentMp.additive_b}</div>
-                )}
-                <div style={{ fontSize: 10, color: currentMp.ms_compatible ? "var(--accent)" : "var(--red)", marginTop: 4 }}>
-                  {currentMp.ms_compatible ? "✓ MS compatible" : "✗ Not MS compatible"}
+        {/* Dynamic Mobile Phase */}
+        <Card title="Mobile Phase (Binary)" accent="#4d9fff" extra={
+          recommendedMpId ? <Badge text="AI Selected" color="var(--blue)" /> : undefined
+        }>
+          {bufferSuggestions.length > 0 && (
+            <div style={{ padding: "6px 10px", background: "#4d9fff15", border: "1px solid #4d9fff30", borderRadius: 6, marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#4d9fff", marginBottom: 4 }}>AI BUFFER RECOMMENDATIONS</div>
+              {bufferSuggestions.slice(0, 2).map((s, i) => (
+                <div key={i} style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>→ {s}</div>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto" }}>
+            {filteredMps.map(mp => (
+              <MobilePhaseCard key={mp.id} mp={mp} selected={mpId === mp.id} onSelect={() => setMpId(mp.id)} recommended={mp.id === recommendedMpId} />
+            ))}
+          </div>
+        </Card>
+
+        {/* Dynamic Gradient Program */}
+        <Card title="Binary Gradient Program" accent="#ffb347" extra={
+          optimizing ? <Badge text="ML Optimizing…" color="var(--amber)" /> :
+          mlGradients.length > 0 ? <Badge text="ML Optimized" color="var(--amber)" /> : undefined
+        }>
+          {/* ML gradient suggestions */}
+          {mlGradients.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--amber)", marginBottom: 6 }}>ML GRADIENT CANDIDATES</div>
+              {mlGradients.slice(0, 3).map((g, i) => (
+                <div key={i} onClick={() => setGradient(g.gradient)} style={{
+                  padding: "6px 10px", borderRadius: 6, cursor: "pointer", marginBottom: 4,
+                  background: JSON.stringify(gradient) === JSON.stringify(g.gradient) ? "#ffb34720" : "var(--bg-secondary)",
+                  border: `1px solid ${JSON.stringify(gradient) === JSON.stringify(g.gradient) ? "#ffb34760" : "var(--border)"}`,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: i === 0 ? "var(--amber)" : "var(--text-secondary)" }}>
+                      {i === 0 ? "🥇 Best" : i === 1 ? "🥈 Fast" : "🥉 Alternative"}
+                    </span>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <Badge text={`Score ${(g.total_score * 100).toFixed(0)}%`} color="var(--amber)" />
+                      <Badge text={g.n_coelutions_critical === 0 ? "✓ No overlap" : `⚠ ${g.n_coelutions_critical}`} color={g.n_coelutions_critical === 0 ? "var(--green)" : "var(--red)"} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{g.optimization_notes.slice(0, 60)}</div>
                 </div>
-              </div>
+              ))}
             </div>
           )}
-        </Card>
 
-        {/* Binary Gradient Program */}
-        <Card title="Binary Gradient Program">
-          {/* Preset buttons */}
+          {/* Presets */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
             {GRADIENT_PRESETS.map(p => (
-              <button key={p.label} onClick={() => setGradient(p.grad)} style={{
-                fontSize: 10, padding: "3px 8px", borderRadius: 4, cursor: "pointer",
-                background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text-secondary)",
-              }}>{p.label}</button>
+              <button key={p.label} onClick={() => setGradient(p.grad)} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 4, cursor: "pointer", background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}>{p.label}</button>
             ))}
           </div>
 
-          {/* Gradient table with A and B columns */}
-          <div style={{ background: "var(--bg-secondary)", borderRadius: 8, padding: "8px", marginBottom: 8 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "24px 60px 1fr 1fr 20px", gap: 4, alignItems: "center", marginBottom: 6 }}>
+          {/* Gradient table */}
+          <div style={{ background: "var(--bg-secondary)", borderRadius: 8, padding: 8, marginBottom: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "20px 60px 1fr 1fr 20px", gap: 4, marginBottom: 5 }}>
               <span style={{ fontSize: 9, color: "var(--text-muted)", textAlign: "center" }}>#</span>
-              <span style={{ fontSize: 9, color: "var(--text-muted)", textAlign: "center" }}>Time (min)</span>
-              <span style={{ fontSize: 9, color: "#4d9fff", textAlign: "center", fontWeight: 700 }}>%A (Aqueous)</span>
-              <span style={{ fontSize: 9, color: "#ffb347", textAlign: "center", fontWeight: 700 }}>%B (Organic)</span>
+              <span style={{ fontSize: 9, color: "var(--text-muted)", textAlign: "center" }}>min</span>
+              <span style={{ fontSize: 9, color: "#4d9fff", textAlign: "center", fontWeight: 700 }}>%A Aqueous</span>
+              <span style={{ fontSize: 9, color: "#ffb347", textAlign: "center", fontWeight: 700 }}>%B Organic</span>
               <span />
             </div>
             {gradient.map((pt, i) => {
               const pctA = 100 - pt.pct_b;
               return (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "24px 60px 1fr 1fr 20px", gap: 4, alignItems: "center", marginBottom: 4 }}>
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "20px 60px 1fr 1fr 20px", gap: 4, alignItems: "center", marginBottom: 4 }}>
                   <span style={{ fontSize: 9, color: "var(--text-muted)", textAlign: "center" }}>{i + 1}</span>
                   <input type="number" value={pt.time_min} step={0.5} min={0}
                     onChange={e => setGradient(g => g.map((p, j) => j === i ? { ...p, time_min: +e.target.value } : p))}
-                    style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)", padding: "4px 6px", borderRadius: 5, fontSize: 11, textAlign: "center", width: "100%" }} />
-                  {/* %A display with bar */}
+                    style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)", padding: "3px 5px", borderRadius: 4, fontSize: 11, textAlign: "center" }} />
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <div style={{ flex: 1, height: 14, background: "var(--bg-primary)", borderRadius: 4, overflow: "hidden", border: "1px solid var(--border)" }}>
-                      <div style={{ width: `${pctA}%`, height: "100%", background: "#378ADD", opacity: 0.7 }} />
+                    <div style={{ flex: 1, height: 12, background: "var(--bg-primary)", borderRadius: 3, overflow: "hidden", border: "1px solid var(--border)" }}>
+                      <div style={{ width: `${pctA}%`, height: "100%", background: "#4d9fff", opacity: 0.7 }} />
                     </div>
-                    <span style={{ fontSize: 10, color: "#4d9fff", fontFamily: "monospace", minWidth: 30, textAlign: "right" }}>{pctA}%</span>
+                    <span style={{ fontSize: 10, color: "#4d9fff", fontFamily: "monospace", minWidth: 28, textAlign: "right" }}>{pctA}%</span>
                   </div>
-                  {/* %B input with bar */}
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <div style={{ flex: 1, height: 14, background: "var(--bg-primary)", borderRadius: 4, overflow: "hidden", border: "1px solid var(--border)" }}>
-                      <div style={{ width: `${pt.pct_b}%`, height: "100%", background: "#ffb347", opacity: 0.85 }} />
-                    </div>
                     <input type="number" value={pt.pct_b} step={5} min={0} max={100}
                       onChange={e => setGradient(g => g.map((p, j) => j === i ? { ...p, pct_b: +e.target.value } : p))}
-                      style={{ background: "var(--bg-primary)", border: "1px solid #ffb34760", color: "#ffb347", padding: "3px 5px", borderRadius: 4, fontSize: 11, textAlign: "center", width: 40, fontWeight: 600 }} />
+                      style={{ width: 40, background: "var(--bg-primary)", border: "1px solid #ffb34760", color: "#ffb347", padding: "3px 5px", borderRadius: 4, fontSize: 11, textAlign: "center", fontWeight: 600 }} />
+                    <div style={{ flex: 1, height: 12, background: "var(--bg-primary)", borderRadius: 3, overflow: "hidden", border: "1px solid var(--border)" }}>
+                      <div style={{ width: `${pt.pct_b}%`, height: "100%", background: "#ffb347", opacity: 0.8 }} />
+                    </div>
                   </div>
-                  {gradient.length > 2 ? (
-                    <button onClick={() => setGradient(g => g.filter((_, j) => j !== i))} style={{ fontSize: 12, color: "var(--red)", background: "none", border: "none", cursor: "pointer" }}>×</button>
-                  ) : <span />}
+                  {gradient.length > 2 ? <button onClick={() => setGradient(g => g.filter((_, j) => j !== i))} style={{ fontSize: 12, color: "var(--red)", background: "none", border: "none", cursor: "pointer" }}>×</button> : <span />}
                 </div>
               );
             })}
-            <button onClick={() => setGradient(g => [...g, { time_min: +(g[g.length - 1].time_min + 1).toFixed(1), pct_b: g[g.length - 1].pct_b }])} style={{
-              fontSize: 10, padding: "4px 10px", borderRadius: 5, cursor: "pointer", marginTop: 4,
-              background: "var(--accent-dim)", border: "1px solid var(--accent)40", color: "var(--accent)",
-            }}>+ Add point</button>
+            <button onClick={() => setGradient(g => [...g, { time_min: +(g[g.length - 1].time_min + 1).toFixed(1), pct_b: g[g.length - 1].pct_b }])} style={{ fontSize: 10, padding: "3px 10px", borderRadius: 5, cursor: "pointer", marginTop: 4, background: "var(--accent-dim)", border: "1px solid var(--accent)40", color: "var(--accent)" }}>+ Add point</button>
           </div>
 
           {/* Live gradient chart */}
-          <div style={{ background: "var(--bg-secondary)", borderRadius: 8, padding: "6px 4px" }}>
+          <div style={{ background: "var(--bg-secondary)", borderRadius: 7, padding: "4px 2px" }}>
             <GradientSVG gradient={gradient} />
           </div>
         </Card>
 
-        {/* ML Gradient Optimizer */}
-        <Card title="🤖 ML Gradient Optimizer">
-          <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 8 }}>
-            Uses LSS theory + QSRR models to find the optimal gradient for your analyte panel — minimizing co-elutions and maximizing resolution.
-          </div>
-          <GradientOptimizer
-            metabolites={metabolites.filter(m => selectedMets.includes(m.id))}
-            columnId={columnId}
-            mpId={mpId}
-            onApply={(grad) => setGradient(grad)}
-          />
-        </Card>
-
         {/* Instrument */}
-        <Card title="Instrument">
+        <Card title="Instrument Settings">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <div>
-              <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3 }}>Platform</label>
-              <Sel val={instrument} onChange={setInstrument} opts={["Agilent 6495D","Agilent 6470","SCIEX 7500+","SCIEX 6500+","Waters Xevo TQ-S"].map(v => ({ value: v, label: v }))} />
-            </div>
-            <div>
-              <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3 }}>Ion Mode</label>
-              <Sel val={ionMode} onChange={setIonMode} opts={[{ value: "negative", label: "Negative (−)" }, { value: "positive", label: "Positive (+)" }]} />
-            </div>
-            <div>
-              <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3 }}>Flow (mL/min)</label>
-              <input type="number" value={flowRate} onChange={e => setFlowRate(+e.target.value)} step={0.05} min={0.1} max={1} style={{ width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)", padding: "6px 8px", borderRadius: 6, fontSize: 12 }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3 }}>Temp (°C)</label>
-              <input type="number" value={temp} onChange={e => setTemp(+e.target.value)} step={5} min={20} max={80} style={{ width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)", padding: "6px 8px", borderRadius: 6, fontSize: 12 }} />
-            </div>
+            {[
+              { label: "Instrument", val: instrument, setter: setInstrument, opts: ["Agilent 6495D","Agilent 6470","SCIEX 7500+","SCIEX 6500+","Waters Xevo TQ-S"] },
+              { label: "Ion Mode", val: ionMode, setter: setIonMode, opts: ["negative","positive"] },
+            ].map(s => (
+              <div key={s.label}>
+                <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3 }}>{s.label}</label>
+                <select value={s.val} onChange={e => s.setter(e.target.value)} style={{ width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)", padding: "6px 8px", borderRadius: 6, fontSize: 12 }}>
+                  {s.opts.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+            ))}
+            {[
+              { label: "Flow Rate (mL/min)", val: flowRate, setter: setFlowRate, step: 0.05, min: 0.1, max: 1 },
+              { label: "Temperature (°C)", val: temp, setter: setTemp, step: 5, min: 20, max: 80 },
+            ].map(s => (
+              <div key={s.label}>
+                <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3 }}>{s.label}</label>
+                <input type="number" value={s.val} onChange={e => s.setter(+e.target.value)} step={s.step} min={s.min} max={s.max} style={{ width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)", padding: "6px 8px", borderRadius: 6, fontSize: 12 }} />
+              </div>
+            ))}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, padding: "6px 8px", background: includeMRM ? "var(--accent-dim)" : "var(--bg-secondary)", borderRadius: 6, border: `1px solid ${includeMRM ? "var(--accent)40" : "var(--border)"}`, cursor: "pointer" }} onClick={() => setIncludeMRM(v => !v)}>
-            <div style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${includeMRM ? "var(--accent)" : "var(--border)"}`, background: includeMRM ? "var(--accent)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              {includeMRM && <span style={{ fontSize: 10, color: "#0f1117", fontWeight: 700 }}>✓</span>}
+          <div onClick={() => setIncludeMRM(v => !v)} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, padding: "6px 10px", background: includeMRM ? "var(--accent-dim)" : "var(--bg-secondary)", borderRadius: 6, border: `1px solid ${includeMRM ? "var(--accent)40" : "var(--border)"}`, cursor: "pointer" }}>
+            <div style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${includeMRM ? "var(--accent)" : "var(--border)"}`, background: includeMRM ? "var(--accent)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {includeMRM && <span style={{ fontSize: 10, color: "#0f1117", fontWeight: 800 }}>✓</span>}
             </div>
             <div>
               <div style={{ fontSize: 12, color: includeMRM ? "var(--accent)" : "var(--text-secondary)", fontWeight: 600 }}>Include MRM Transitions</div>
-              <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Generate QQQ transitions for all analytes</div>
+              <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Auto-generate QQQ method</div>
             </div>
           </div>
         </Card>
 
         <button onClick={runSim} disabled={running || !selectedMets.length} style={{
-          width: "100%", padding: "12px 0",
+          width: "100%", padding: "11px 0",
           background: running ? "var(--border)" : "linear-gradient(135deg, #00d4a4, #00b890)",
-          color: "#0f1117", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700,
-          cursor: running ? "not-allowed" : "pointer", transition: "all 0.2s",
+          color: "#0f1117", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: running ? "not-allowed" : "pointer",
         }}>
           {running ? "⏳ Simulating…" : `▶ Run Simulation (${selectedMets.length} analytes)`}
         </button>
+        {selectedMets.length > 0 && <div style={{ textAlign: "center", fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>Auto-updates when parameters change</div>}
         {error && <div style={{ marginTop: 8, fontSize: 12, color: "var(--red)", padding: "8px 12px", background: "var(--red-dim)", borderRadius: 6 }}>{error}</div>}
       </div>
 
@@ -523,68 +584,73 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
           <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, padding: 60, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
             <div style={{ fontSize: 48 }}>🔬</div>
             <p style={{ fontSize: 14, color: "var(--text-secondary)", textAlign: "center" }}>
-              Select metabolites and parameters,<br />then click <strong style={{ color: "var(--accent)" }}>Run Simulation</strong>
+              Select metabolites — column, mobile phase, and gradient<br />will <strong style={{ color: "var(--accent)" }}>automatically optimize</strong> and simulate
             </p>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center" }}>
-              {metabolites.length} metabolites · {columns.length} columns · {mobilePhases.length} mobile phases
-            </p>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center" }}>{metabolites.length} metabolites · {columns.length} columns · {mobilePhases.length} mobile phases</p>
           </div>
         ) : (
-          <div>
+          <>
+            {/* Current method summary bar */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 14 }}>
+              {[
+                { label: "Column", value: currentCol?.name?.split(" ").slice(-1)[0] || "—", color: "var(--accent)" },
+                { label: "Mobile Phase", value: currentMp?.mode || "—", color: "#4d9fff" },
+                { label: "Peaks", value: String(result.results.length), color: "var(--amber)" },
+                { label: "MRM Transitions", value: String(allMRM.length), color: "var(--purple)" },
+                { label: "Runtime", value: `${result.runtime_ms}ms`, color: "var(--text-secondary)" },
+              ].map(s => (
+                <div key={s.label} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px", textAlign: "center" }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
             {/* Result tabs */}
-            <div style={{ display: "flex", gap: 0, marginBottom: 14, background: "var(--bg-card)", borderRadius: 8, border: "1px solid var(--border)", overflow: "hidden" }}>
+            <div style={{ display: "flex", background: "var(--bg-card)", borderRadius: 8, border: "1px solid var(--border)", overflow: "hidden", marginBottom: 14 }}>
               {([
                 { id: "chrom", label: "📈 Chromatogram" },
                 { id: "peaks", label: "📊 Peak Data" },
-                { id: "mrm", label: `⚡ MRM (${allMRMTransitions.length})` },
-                { id: "resolution", label: `🔍 Resolution (${result.resolution_matrix.length})` },
+                { id: "mrm", label: `⚡ MRM (${allMRM.length})` },
+                { id: "resolution", label: `🔍 Resolution` },
                 { id: "suppression", label: "🧪 Ion Suppression" },
               ] as { id: typeof activeResultTab; label: string }[]).map(tab => (
                 <button key={tab.id} onClick={() => setActiveResultTab(tab.id)} style={{
-                  flex: 1, padding: "10px 4px", fontSize: 11, fontWeight: 600,
+                  flex: 1, padding: "9px 4px", fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer",
                   color: activeResultTab === tab.id ? "var(--accent)" : "var(--text-muted)",
                   background: activeResultTab === tab.id ? "var(--accent-dim)" : "transparent",
-                  border: "none", borderRight: "1px solid var(--border)", cursor: "pointer",
                   borderBottom: activeResultTab === tab.id ? "2px solid var(--accent)" : "2px solid transparent",
+                  borderRight: "1px solid var(--border)",
                 }}>{tab.label}</button>
               ))}
             </div>
 
-            {/* Chromatogram tab */}
+            {/* Chromatogram */}
             {activeResultTab === "chrom" && (
-              <Card title={`Predicted Chromatogram — ${result.column} · ${result.mobile_phase}`} extra={
-                <div style={{ display: "flex", gap: 6 }}>
-                  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "var(--accent-dim)", color: "var(--accent)", fontWeight: 600 }}>{result.results.length} peaks</span>
-                  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "var(--blue-dim)", color: "var(--blue)" }}>{result.runtime_ms}ms</span>
-                </div>
-              }>
+              <Card title={`Predicted Chromatogram — ${result.column}`}>
                 <ChromSVG result={result} peakColors={peakColors} />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
                   {result.results.map((r, i) => (
                     <div key={r.metabolite_id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <div style={{ width: 8, height: 8, borderRadius: 2, background: peakColors[i % peakColors.length] }} />
-                      <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                        {r.metabolite_name} <span style={{ fontFamily: "monospace", color: peakColors[i % peakColors.length] }}>{r.rt_min.toFixed(2)}min</span>
-                      </span>
+                      <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>{r.metabolite_name} <span style={{ fontFamily: "monospace", color: peakColors[i % peakColors.length] }}>{r.rt_min.toFixed(2)}min</span></span>
                     </div>
                   ))}
                 </div>
               </Card>
             )}
 
-            {/* Peak data tab */}
+            {/* Peaks */}
             {activeResultTab === "peaks" && (
               <Card title="Peak Parameters">
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                  <thead>
-                    <tr style={{ background: "var(--bg-secondary)" }}>
-                      {["Compound","RT (min)","k","Width","Tailing","Plates","Confidence"].map(h => (
-                        <th key={h} style={{ padding: "7px 10px", textAlign: "left", fontSize: 11, color: "var(--text-muted)", fontWeight: 600, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
+                  <thead><tr style={{ background: "var(--bg-secondary)" }}>
+                    {["Compound","RT (min)","k","Width (min)","Tailing","Plates","Confidence"].map(h => (
+                      <th key={h} style={{ padding: "7px 10px", textAlign: "left", fontSize: 11, color: "var(--text-muted)", fontWeight: 600, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr></thead>
                   <tbody>
-                    {[...result.results].sort((a, b) => a.rt_min - b.rt_min).map((r, i) => {
+                    {[...result.results].sort((a, b) => a.rt_min - b.rt_min).map((r) => {
                       const ci = result.results.indexOf(r);
                       return (
                         <tr key={r.metabolite_id} style={{ borderBottom: "1px solid var(--border)" }}>
@@ -615,34 +681,27 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
               </Card>
             )}
 
-            {/* MRM tab */}
+            {/* MRM */}
             {activeResultTab === "mrm" && (
-              <Card title={`MRM Transitions — ${instrument} (${ionMode} mode)`} extra={
+              <Card title={`MRM Transitions — ${instrument} (${ionMode})`} extra={
                 <button onClick={() => {
-                  const rows = [["Compound","Precursor m/z","Product m/z","CE (eV)","Frag V","CAV","Dwell ms","Type","RT (min)"]];
-                  allMRMTransitions.forEach(t => rows.push([t.metabolite_name, String(t.precursor_mz), String(t.product_mz), String(t.collision_energy), String(t.fragmentor_voltage || ""), String(t.cell_accelerator_voltage || ""), String(t.dwell_time_ms || ""), t.transition_type, String(t.retention_time_min || "")]));
-                  const blob = new Blob([rows.map(r => r.join(",")).join("\n")], { type: "text/csv" });
-                  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `mrm_${instrument.replace(/ /g,"_")}.csv`; a.click();
-                }} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 5, cursor: "pointer", background: "var(--blue-dim)", border: "1px solid var(--blue)40", color: "var(--blue)" }}>
-                  ↓ Export CSV
-                </button>
+                  const rows = [["Compound","Precursor m/z","Product m/z","CE (eV)","Frag V","Dwell ms","Type","RT (min)"]];
+                  allMRM.forEach(t => rows.push([t.metabolite_name,String(t.precursor_mz),String(t.product_mz),String(t.collision_energy),String(t.fragmentor_voltage||""),String(t.dwell_time_ms||""),t.transition_type,String(t.retention_time_min||"")]));
+                  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(",")).join("\n")],{type:"text/csv"})); a.download = `mrm_${instrument}.csv`; a.click();
+                }} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 5, cursor: "pointer", background: "var(--blue-dim)", border: "1px solid var(--blue)40", color: "var(--blue)" }}>↓ CSV</button>
               }>
-                {allMRMTransitions.length === 0 ? (
-                  <div style={{ padding: "20px 0", textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
-                    No MRM transitions — enable "Include MRM Transitions" checkbox and re-run simulation.
-                  </div>
+                {allMRM.length === 0 ? (
+                  <p style={{ color: "var(--text-muted)", fontSize: 13, textAlign: "center", padding: "20px 0" }}>Enable "Include MRM Transitions" and re-run simulation</p>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                      <thead>
-                        <tr style={{ background: "var(--bg-secondary)" }}>
-                          {["Compound","Adduct","Precursor m/z","Product m/z","CE (eV)","Frag V","CAV","Dwell ms","Type","RT (min)"].map(h => (
-                            <th key={h} style={{ padding: "7px 8px", textAlign: "left", fontSize: 10, color: "var(--text-muted)", fontWeight: 600, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
+                      <thead><tr style={{ background: "var(--bg-secondary)" }}>
+                        {["Compound","Adduct","Precursor","Product","CE","Frag V","Dwell ms","Type","RT"].map(h => (
+                          <th key={h} style={{ padding: "7px 8px", textAlign: "left", fontSize: 10, color: "var(--text-muted)", fontWeight: 600, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr></thead>
                       <tbody>
-                        {allMRMTransitions.map((t, i) => (
+                        {allMRM.map((t, i) => (
                           <tr key={i} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "transparent" : "var(--bg-secondary)30" }}>
                             <td style={{ padding: "6px 8px", fontWeight: 500, color: "var(--text-primary)" }}>{t.metabolite_name}</td>
                             <td style={{ padding: "6px 8px", fontFamily: "monospace", fontSize: 10, color: "var(--text-muted)" }}>{t.adduct}</td>
@@ -650,12 +709,9 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
                             <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--accent)", fontWeight: 600 }}>{t.product_mz}</td>
                             <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--amber)", fontWeight: 600 }}>{t.collision_energy}</td>
                             <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-secondary)" }}>{t.fragmentor_voltage || "—"}</td>
-                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-secondary)" }}>{t.cell_accelerator_voltage || "—"}</td>
                             <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-secondary)" }}>{t.dwell_time_ms || "—"}</td>
                             <td style={{ padding: "6px 8px" }}>
-                              <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, fontWeight: 600, background: t.is_quantifier ? "var(--accent-dim)" : "var(--blue-dim)", color: t.is_quantifier ? "var(--accent)" : "var(--blue)" }}>
-                                {t.transition_type?.toUpperCase() || (t.is_quantifier ? "QUANT" : "QUAL")}
-                              </span>
+                              <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, fontWeight: 600, background: t.is_quantifier ? "var(--accent-dim)" : "var(--blue-dim)", color: t.is_quantifier ? "var(--accent)" : "var(--blue)" }}>{t.is_quantifier ? "QUANT" : "QUAL"}</span>
                             </td>
                             <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-secondary)" }}>{t.retention_time_min?.toFixed(2) || "—"}</td>
                           </tr>
@@ -667,18 +723,18 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
               </Card>
             )}
 
-            {/* Resolution tab */}
+            {/* Resolution */}
             {activeResultTab === "resolution" && (
               <Card title="Co-Elution Risk Matrix">
                 {result.resolution_matrix.length === 0 ? (
-                  <div style={{ padding: "20px 0", textAlign: "center", color: "var(--text-muted)" }}>Select 2+ metabolites to see resolution matrix</div>
+                  <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "20px 0" }}>Select 2+ metabolites to see resolution matrix</p>
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
                     {result.resolution_matrix.map((r, i) => (
                       <div key={i} style={{ padding: "8px 12px", borderRadius: 7, background: riskColor(r.risk_level) + "15", border: `1px solid ${riskColor(r.risk_level)}40` }}>
                         <div style={{ fontSize: 11, color: riskColor(r.risk_level), fontWeight: 700 }}>{r.compound_a} ↔ {r.compound_b}</div>
                         <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>Rs = <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{r.rs.toFixed(2)}</span> · {r.risk_level.toUpperCase()}</div>
-                        <div style={{ marginTop: 4, height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{ marginTop: 5, height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
                           <div style={{ width: `${Math.min(r.risk_score, 100)}%`, height: "100%", background: riskColor(r.risk_level) }} />
                         </div>
                       </div>
@@ -688,9 +744,9 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
               </Card>
             )}
 
-            {/* Ion suppression tab */}
+            {/* Ion Suppression */}
             {activeResultTab === "suppression" && (
-              <Card title="Ion Suppression Risk (plasma matrix)">
+              <Card title="Ion Suppression Risk">
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {Object.entries(result.ion_suppression).map(([name, score]) => (
                     <div key={name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 10px", background: "var(--bg-secondary)", borderRadius: 6 }}>
@@ -705,7 +761,7 @@ export default function SimulateTab({ metabolites, columns, mobilePhases, peakCo
                 </div>
               </Card>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>
