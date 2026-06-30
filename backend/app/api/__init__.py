@@ -693,3 +693,78 @@ async def import_enriched(req: EnrichRequest, db: Session = Depends(get_db)):
         "imported_names": imported,
         "total_in_db": db.query(Metabolite).count(),
     }
+
+
+# ─── CO-ELUTION RESOLVER ──────────────────────────────────────────────────────
+router_resolver = APIRouter()
+
+class ResolveCoElutionRequest(BaseModel):
+    metabolite_ids: List[str]
+    column_id: str
+    mobile_phase_id: str
+    gradient: List[dict]
+    flow_rate_ml_min: float = 0.4
+    temperature_c: float = 40.0
+    ion_mode: str = "negative"
+
+@router_resolver.post("/diagnose")
+def diagnose_coelution(req: ResolveCoElutionRequest, db: Session = Depends(get_db)):
+    """
+    Core diagnostic endpoint: runs simulation, detects co-elutions,
+    diagnoses root causes, and returns a ranked action plan.
+    """
+    from app.services.coelution_resolver import resolver as coelution_resolver
+
+    col = db.query(Column_).filter(Column_.id == req.column_id).first()
+    mp = db.query(MobilePhase).filter(MobilePhase.id == req.mobile_phase_id).first()
+    if not col or not mp:
+        raise HTTPException(status_code=404, detail="Column or mobile phase not found")
+
+    col_dict = {"id": col.id, "name": col.name, "mode": col.mode, "vendor": col.vendor,
+                "chemistry": col.chemistry, "particle_size_um": col.particle_size_um,
+                "length_mm": col.length_mm, "id_mm": col.id_mm,
+                "retention_params": col.retention_params or {}}
+    mp_dict = {"id": mp.id, "name": mp.name, "ph": mp.ph, "mode": mp.mode,
+               "solvent_a": mp.solvent_a, "solvent_b": mp.solvent_b}
+
+    metabolites_data = []
+    peaks = []
+    for met_id in req.metabolite_ids:
+        met = db.query(Metabolite).filter(Metabolite.id == met_id).first()
+        if not met:
+            continue
+        met_dict = {
+            "id": met.id, "name": met.name, "logp": met.logp, "logd": met.logd,
+            "pka": met.pka, "psa": met.psa, "formula": met.formula,
+            "exact_mass": met.exact_mass, "bio_class": met.bio_class,
+            "carbon_count": met.carbon_count, "h_bond_donors": met.h_bond_donors,
+            "rp_retention_class": met.rp_retention_class,
+            "hilic_retention_class": met.hilic_retention_class,
+        }
+        metabolites_data.append(met_dict)
+        inp = SimulationInput(
+            metabolite=met_dict, column=col_dict, mobile_phase=mp_dict,
+            gradient=req.gradient, flow_rate_ml_min=req.flow_rate_ml_min,
+            temperature_c=req.temperature_c, ion_mode=req.ion_mode,
+        )
+        peaks.append(chroma_engine.predict_rt(inp))
+
+    if len(peaks) < 2:
+        return {"status": "resolved", "summary": "Need at least 2 metabolites to detect co-elutions.",
+                "n_critical_pairs": 0, "diagnoses": [], "action_plan": [], "global_recommendations": []}
+
+    rs_results = chroma_engine.resolution_matrix(peaks)
+    rt_lookup = {p.metabolite_name: p.rt_min for p in peaks}
+
+    coelution_pairs = [{
+        "compound_a": r.compound_a, "compound_b": r.compound_b,
+        "rt_a": rt_lookup.get(r.compound_a, 0), "rt_b": rt_lookup.get(r.compound_b, 0),
+        "rs": r.rs, "risk_level": r.risk_level,
+        "delta_rt": abs(rt_lookup.get(r.compound_a, 0) - rt_lookup.get(r.compound_b, 0)),
+    } for r in rs_results]
+
+    result = coelution_resolver.diagnose_and_resolve(
+        coelution_pairs, metabolites_data, col_dict, mp_dict,
+        req.gradient, req.flow_rate_ml_min, req.temperature_c,
+    )
+    return result
