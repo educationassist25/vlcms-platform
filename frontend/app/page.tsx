@@ -155,7 +155,7 @@ export default function Home() {
             <MRMTab metabolites={metabolites} columns={columns} mobilePhases={mobilePhases} peakColors={PEAK_COLORS} />
           )}
           {activeTab === "Isotope Tracer" && (
-            <IsotopeTab metabolites={metabolites} />
+            <IsotopeTab metabolites={metabolites} peakColors={PEAK_COLORS} />
           )}
           {activeTab === "ML Optimizer" && (
             <MLTab metabolites={metabolites} columns={columns} mobilePhases={mobilePhases} peakColors={PEAK_COLORS} />
