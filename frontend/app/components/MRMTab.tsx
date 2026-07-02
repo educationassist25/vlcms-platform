@@ -1,17 +1,18 @@
 "use client";
 import { useState } from "react";
 import { api, type Metabolite, type Column, type MobilePhase, type MRMResult, type MRMTransition } from "../lib/api";
+import MetabolitePanel from "./MetabolitePanel";
 
 interface Props { metabolites: Metabolite[]; columns: Column[]; mobilePhases: MobilePhase[]; peakColors: string[]; }
 
 function Card({ title, children, extra }: { title: string; children: React.ReactNode; extra?: React.ReactNode }) {
   return (
-    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 16 }}>
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{title}</span>
+    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
+      <div style={{ padding: "9px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{title}</span>
         {extra}
       </div>
-      <div style={{ padding: 16 }}>{children}</div>
+      <div style={{ padding: 12 }}>{children}</div>
     </div>
   );
 }
@@ -24,11 +25,7 @@ export default function MRMTab({ metabolites, peakColors }: Props) {
   const [result, setResult] = useState<MRMResult | null>(null);
   const [scheduled, setScheduled] = useState<{ total_transitions: number; transitions: MRMTransition[] } | null>(null);
   const [running, setRunning] = useState(false);
-  const [search, setSearch] = useState("");
   const [filterQuant, setFilterQuant] = useState(false);
-
-  const filtered = metabolites.filter(m => m.name.toLowerCase().includes(search.toLowerCase()));
-  const toggle = (id: string) => setSelectedMets(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   const generate = async () => {
     if (!selectedMets.length) return;
@@ -43,50 +40,24 @@ export default function MRMTab({ metabolites, peakColors }: Props) {
 
   const exportCSV = () => {
     if (!result) return;
-    const rows = [["Compound","Precursor m/z","Product m/z","CE (eV)","Fragmentor V","CAV","Dwell (ms)","Type","RT (min)","RT Start","RT End"]];
+    const rows = [["Compound","Precursor m/z","Product m/z","CE (eV)","Fragmentor V","CAV","Dwell (ms)","Type","RT (min)"]];
     result.method.forEach(m => m.transitions.forEach(t => {
       rows.push([t.metabolite_name, String(t.precursor_mz), String(t.product_mz), String(t.collision_energy),
         String(t.fragmentor_voltage || ""), String(t.cell_accelerator_voltage || ""),
-        String(t.dwell_time_ms || ""), t.transition_type,
-        String(t.retention_time_min || ""), String((t as any).rt_window_start || ""), String((t as any).rt_window_end || "")]);
+        String(t.dwell_time_ms || ""), t.transition_type, String(t.retention_time_min || "")]);
     }));
     const blob = new Blob([rows.map(r => r.join(",")).join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `mrm_method_${instrument.replace(/ /g,"_")}.csv`; a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `mrm_method_${instrument.replace(/ /g,"_")}.csv`; a.click();
   };
 
   const allTransitions = result?.method.flatMap(m => m.transitions) || [];
   const displayTransitions = filterQuant ? allTransitions.filter(t => t.is_quantifier) : allTransitions;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 14, alignItems: "start" }}>
       {/* Controls */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <Card title="Select Metabolites">
-          <input placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} style={{
-            width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)",
-            padding: "7px 10px", borderRadius: 6, fontSize: 12, marginBottom: 8,
-          }} />
-          <div style={{ maxHeight: 300, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
-            {filtered.map((m, i) => {
-              const checked = selectedMets.includes(m.id);
-              const color = peakColors[i % peakColors.length];
-              return (
-                <button key={m.id} onClick={() => toggle(m.id)} style={{
-                  display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 6,
-                  background: checked ? color + "15" : "transparent", border: `1px solid ${checked ? color + "40" : "transparent"}`,
-                  cursor: "pointer", textAlign: "left",
-                }}>
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: checked ? color : "var(--border-light)" }} />
-                  <div>
-                    <div style={{ fontSize: 12, color: checked ? color : "var(--text-primary)", fontWeight: checked ? 600 : 400 }}>{m.name}</div>
-                    <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{m.exact_mass?.toFixed(4)} Da · {m.bio_class}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </Card>
+      <div>
+        <MetabolitePanel metabolites={metabolites} selectedIds={selectedMets} onChange={setSelectedMets} peakColors={peakColors} />
 
         <Card title="Instrument Settings">
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -120,11 +91,11 @@ export default function MRMTab({ metabolites, peakColors }: Props) {
         </Card>
 
         <button onClick={generate} disabled={running || !selectedMets.length} style={{
-          padding: "10px 0", background: running ? "var(--border)" : "linear-gradient(135deg, #4d9fff, #0077ff)",
+          width: "100%", padding: "10px 0", background: running ? "var(--border)" : "linear-gradient(135deg, #4d9fff, #0077ff)",
           color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700,
           cursor: running ? "not-allowed" : "pointer",
         }}>
-          {running ? "⏳ Generating…" : "⚡ Generate MRM"}
+          {running ? "⏳ Generating…" : `⚡ Generate MRM (${selectedMets.length} analytes)`}
         </button>
       </div>
 
@@ -143,7 +114,7 @@ export default function MRMTab({ metabolites, peakColors }: Props) {
         ) : (
           <>
             {/* Summary Cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 14 }}>
               {[
                 { label: "Metabolites", value: result.n_metabolites, color: "var(--accent)" },
                 { label: "Total Transitions", value: result.total_transitions, color: "var(--blue)" },
@@ -157,9 +128,8 @@ export default function MRMTab({ metabolites, peakColors }: Props) {
               ))}
             </div>
 
-            {/* Scheduled MRM info */}
             {scheduled && (
-              <div style={{ background: "var(--accent-dim)", border: "1px solid var(--accent)40", borderRadius: 8, padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "var(--accent)" }}>
+              <div style={{ background: "var(--accent-dim)", border: "1px solid var(--accent)40", borderRadius: 8, padding: "10px 16px", marginBottom: 14, fontSize: 12, color: "var(--accent)" }}>
                 ✓ Scheduled MRM optimized: {scheduled.total_transitions} transitions with dynamic dwell times
               </div>
             )}
