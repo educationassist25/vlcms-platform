@@ -1,17 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api, type Metabolite, type Tracer, type IsotopeResult } from "../lib/api";
+import MetabolitePanel from "./MetabolitePanel";
 
-interface Props { metabolites: Metabolite[]; }
+interface Props { metabolites: Metabolite[]; peakColors: string[]; }
 
 function Card({ title, children, extra }: { title: string; children: React.ReactNode; extra?: React.ReactNode }) {
   return (
-    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 16 }}>
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{title}</span>
+    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
+      <div style={{ padding: "9px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{title}</span>
         {extra}
       </div>
-      <div style={{ padding: 16 }}>{children}</div>
+      <div style={{ padding: 12 }}>{children}</div>
     </div>
   );
 }
@@ -25,11 +26,7 @@ function MIDBarChart({ mid, label, color }: { mid: number[]; label: string; colo
         {mid.map((v, i) => (
           <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, flex: 1 }}>
             <span style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "monospace" }}>{(v * 100).toFixed(1)}</span>
-            <div style={{
-              width: "100%", background: color, borderRadius: "2px 2px 0 0",
-              height: `${(v / max) * 64}px`, minHeight: v > 0 ? 2 : 0,
-              opacity: 0.85, transition: "height 0.3s",
-            }} />
+            <div style={{ width: "100%", background: color, borderRadius: "2px 2px 0 0", height: `${(v / max) * 64}px`, minHeight: v > 0 ? 2 : 0, opacity: 0.85 }} />
             <span style={{ fontSize: 9, color: "var(--text-muted)" }}>M+{i}</span>
           </div>
         ))}
@@ -38,21 +35,16 @@ function MIDBarChart({ mid, label, color }: { mid: number[]; label: string; colo
   );
 }
 
-export default function IsotopeTab({ metabolites }: Props) {
+export default function IsotopeTab({ metabolites, peakColors }: Props) {
   const [tracers, setTracers] = useState<Tracer[]>([]);
   const [selectedMets, setSelectedMets] = useState<string[]>([]);
   const [tracer, setTracer] = useState("13C-glucose");
   const [ionMode, setIonMode] = useState("negative");
   const [result, setResult] = useState<IsotopeResult | null>(null);
   const [running, setRunning] = useState(false);
-  const [search, setSearch] = useState("");
-
   const COLORS = ["#00d4a4","#4d9fff","#ffb347","#ff6b6b","#b48cff","#57d9a3","#f06292","#80deea"];
 
   useEffect(() => { api.tracers().then(setTracers).catch(() => {}); }, []);
-
-  const filtered = metabolites.filter(m => m.name.toLowerCase().includes(search.toLowerCase()));
-  const toggle = (id: string) => setSelectedMets(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   const run = async () => {
     if (!selectedMets.length) return;
@@ -66,9 +58,9 @@ export default function IsotopeTab({ metabolites }: Props) {
   const selTracer = tracers.find(t => t.key === tracer);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 14, alignItems: "start" }}>
       {/* Controls */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div>
         <Card title="Tracer Selection">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {tracers.map(t => (
@@ -77,9 +69,7 @@ export default function IsotopeTab({ metabolites }: Props) {
                 background: tracer === t.key ? "var(--accent-dim)" : "var(--bg-hover)",
                 border: `1px solid ${tracer === t.key ? "var(--accent)60" : "var(--border)"}`,
               }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: tracer === t.key ? "var(--accent)" : "var(--text-primary)", marginBottom: 2 }}>
-                  {t.description}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: tracer === t.key ? "var(--accent)" : "var(--text-primary)", marginBottom: 2 }}>{t.description}</div>
                 <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
                   {t.heavy_isotope === 13 ? "¹³C" : t.heavy_isotope === 15 ? "¹⁵N" : "²H"} tracer · {t.applications[0]}
                 </div>
@@ -89,7 +79,7 @@ export default function IsotopeTab({ metabolites }: Props) {
         </Card>
 
         {selTracer && (
-          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, padding: 12 }}>
+          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, padding: 12, marginBottom: 12 }}>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>APPLICATIONS</div>
             {selTracer.applications.map((a, i) => (
               <div key={i} style={{ fontSize: 11, color: "var(--text-secondary)", padding: "2px 0" }}>• {a}</div>
@@ -97,43 +87,23 @@ export default function IsotopeTab({ metabolites }: Props) {
           </div>
         )}
 
-        <Card title="Metabolites">
-          <input placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} style={{
-            width: "100%", background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)",
-            padding: "7px 10px", borderRadius: 6, fontSize: 12, marginBottom: 8,
-          }} />
-          <div style={{ maxHeight: 240, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
-            {filtered.map((m, i) => {
-              const checked = selectedMets.includes(m.id);
-              return (
-                <button key={m.id} onClick={() => toggle(m.id)} style={{
-                  display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 6,
-                  background: checked ? "var(--accent-dim)" : "transparent",
-                  border: `1px solid ${checked ? "var(--accent)40" : "transparent"}`,
-                  cursor: "pointer", textAlign: "left",
-                }}>
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: checked ? "var(--accent)" : "var(--border-light)" }} />
-                  <span style={{ fontSize: 12, color: checked ? "var(--accent)" : "var(--text-primary)" }}>{m.name}</span>
-                  {m.carbon_count && <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: "auto" }}>C{m.carbon_count}</span>}
-                </button>
-              );
-            })}
-          </div>
+        <MetabolitePanel metabolites={metabolites} selectedIds={selectedMets} onChange={setSelectedMets} peakColors={peakColors} maxHeight={200} />
+
+        <Card title="Ion Mode">
+          <select value={ionMode} onChange={e => setIonMode(e.target.value)} style={{
+            background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)",
+            padding: "7px 10px", borderRadius: 6, fontSize: 12, width: "100%",
+          }}>
+            <option value="negative">Negative mode</option>
+            <option value="positive">Positive mode</option>
+          </select>
         </Card>
 
-        <select value={ionMode} onChange={e => setIonMode(e.target.value)} style={{
-          background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)",
-          padding: "7px 10px", borderRadius: 6, fontSize: 12, width: "100%",
-        }}>
-          <option value="negative">Negative mode</option>
-          <option value="positive">Positive mode</option>
-        </select>
-
         <button onClick={run} disabled={running || !selectedMets.length} style={{
-          padding: "10px 0", background: running ? "var(--border)" : "linear-gradient(135deg, #b48cff, #7c4dff)",
+          width: "100%", padding: "10px 0", background: running ? "var(--border)" : "linear-gradient(135deg, #b48cff, #7c4dff)",
           color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: running ? "not-allowed" : "pointer",
         }}>
-          {running ? "⏳ Generating…" : "⚗ Generate Isotopologues"}
+          {running ? "⏳ Generating…" : `⚗ Generate Isotopologues (${selectedMets.length})`}
         </button>
       </div>
 
@@ -164,8 +134,6 @@ export default function IsotopeTab({ metabolites }: Props) {
                   <MIDBarChart mid={r.mid_raw} label="Raw MID" color={COLORS[ri % COLORS.length]} />
                   <MIDBarChart mid={r.mid_corrected} label="Natural Abundance Corrected" color={COLORS[(ri + 3) % COLORS.length]} />
                 </div>
-
-                {/* Isotopologue table */}
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                     <thead>
