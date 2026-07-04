@@ -576,30 +576,65 @@ def ml_column_select(req: ColumnSelectRequest, db: Session = Depends(get_db)):
 
 @router_ml.post("/gradient-optimize")
 def ml_gradient_optimize(req: GradientOptimizeMLRequest, db: Session = Depends(get_db)):
-    from app.services.ml_optimizer import ml_optimizer
+    from app.services.ml_optimizer import LSSGradientOptimizer, COLUMN_INTELLIGENCE
     mets = []
     for mid in req.metabolite_ids:
         m = db.query(Metabolite).filter(Metabolite.id == mid).first()
         if m:
             mets.append({"name": m.name, "logp": m.logp, "logd": m.logd,
-                         "psa": m.psa, "bio_class": m.bio_class,
-                         "carbon_count": m.carbon_count})
+                         "psa": m.psa, "pka": m.pka, "bio_class": m.bio_class,
+                         "exact_mass": m.exact_mass, "carbon_count": m.carbon_count})
     if not mets:
         raise HTTPException(status_code=400, detail="No valid metabolites found")
-    mp = {}
+
+    # Get column and mobile phase details
+    col_info = COLUMN_INTELLIGENCE.get(req.column_chemistry, COLUMN_INTELLIGENCE["C18"])
+    mp_dict = {"ph": 6.8, "mode": col_info["mode"]}
     if req.mobile_phase_id:
         mp_obj = db.query(MobilePhase).filter(MobilePhase.id == req.mobile_phase_id).first()
         if mp_obj:
-            mp = {"ph": mp_obj.ph, "mode": mp_obj.mode, "name": mp_obj.name}
-    results = ml_optimizer.optimize(
-        mets, req.column_chemistry, mp,
-        {"max_time": req.max_time_min, "ion_mode": req.ion_mode}
+            mp_dict = {"ph": mp_obj.ph, "mode": mp_obj.mode}
+
+    # Build column dict for optimizer
+    col_dict = {
+        "mode": col_info["mode"],
+        "chemistry": req.column_chemistry,
+        "length_mm": 100, "id_mm": 2.1, "particle_size_um": 1.7
+    }
+
+    optimizer = LSSGradientOptimizer(col_dict, mp_dict)
+    results = optimizer.optimize(
+        mets,
+        flow_ml_min=col_info["optimal_flow"],
+        temperature_c=col_info["optimal_temp"],
+        max_time=req.max_time_min,
     )
+
+    # Format output for frontend
+    output = []
+    for i, r in enumerate(results):
+        output.append({
+            "rank": i + 1,
+            "label": r["label"],
+            "gradient": r["gradient"],
+            "total_score": r["score"]["total"],
+            "predicted_resolution": r["score"]["min_rs"],
+            "peak_capacity": r["score"]["peak_capacity"],
+            "run_time_min": r["run_time_min"],
+            "n_coelutions_critical": r["score"]["n_critical"],
+            "n_baseline_resolved": r["score"].get("n_baseline_resolved", 0),
+            "b_optimal_fraction": r["score"].get("b_optimal_fraction", 0),
+            "optimization_notes": r["label"] + f" — Score {r['score']['total']*100:.0f}%, Rs_min={r['score']['min_rs']:.2f}, Pc={r['score']['peak_capacity']:.0f}",
+            "scientific_basis": f"LSS theory (Snyder 2007): %B {r['gradient'][0]['pct_b']}→{r['gradient'][-2]['pct_b']} over {r['tg_theory']:.1f} min, S_avg={r['S_avg']}, b≈0.35 optimal",
+            "lss_params": {"phi_start": r["phi_start"], "phi_end": r["phi_end"], "tg_theory": r["tg_theory"], "S_avg": r["S_avg"]},
+        })
+
     return {
         "column_chemistry": req.column_chemistry,
         "n_metabolites": len(mets),
-        "optimized_gradients": results,
-        "algorithm": "LSS-QSRR Genetic Algorithm v1.0"
+        "optimized_gradients": output,
+        "algorithm": "Linear Solvent Strength (LSS) Theory — Snyder & Dolan 2007",
+        "theory_reference": "Snyder LR, Dolan JW (2007) High-Performance Gradient Elution, Wiley. Van Deemter (1956) Chem Eng Sci. Purnell (1960) J Chem Soc. Dolan et al. (1979) J Chromatogr.",
     }
 
 @router_ml.post("/buffer-optimize")
