@@ -11,7 +11,7 @@ import json, time, datetime
 
 from app.db.database import get_db
 from app.models.models import Metabolite, Column_, MobilePhase, SavedMethod, Experiment, SimulationRun, IsotopeResult, AtomMapping, User
-from app.services.chroma_engine import engine as chroma_engine, SimulationInput
+from app.services.chroma_engine import chroma_engine, ChromaEngine, SimulationInput
 from app.services.mrm_generator import generate_mrm_transitions, generate_scheduled_mrm, INSTRUMENT_PARAMS
 from app.services.isotope_service import generate_isotopologues, get_atom_mapping, TRACERS
 from passlib.context import CryptContext
@@ -224,7 +224,7 @@ def simulate_rt(req: SimulateRTRequest, db: Session = Depends(get_db)):
         inp = SimulationInput(
             metabolite=met_dict, column=col_dict, mobile_phase=mp_dict,
             gradient=req.gradient, flow_rate_ml_min=req.flow_rate_ml_min,
-            temperature_c=req.temperature_c, ion_mode=req.ion_mode, instrument=req.instrument,
+            temperature_c=req.temperature_c, ion_mode=req.ion_mode,
         )
         peak = chroma_engine.predict_rt(inp)
         peaks.append(peak)
@@ -250,7 +250,7 @@ def simulate_rt(req: SimulateRTRequest, db: Session = Depends(get_db)):
                       for r in rs_results]
 
     # Ion suppression
-    suppression = chroma_engine.ion_suppression_risk(peaks)
+    suppression = chroma_engine.ion_suppression_risk(peaks, mp_dict)
 
     # Chromatogram
     chromatogram = None
@@ -354,7 +354,7 @@ def scheduled_mrm(req: MRMRequest, db: Session = Depends(get_db)):
                           "carbon_count": met.carbon_count, "h_bond_donors": met.h_bond_donors,
                           "rp_retention_class": met.rp_retention_class,
                           "hilic_retention_class": met.hilic_retention_class, "functional_groups": met.functional_groups}
-                    inp = SimulationInput(md, col_dict, mp_dict, grad, 0.4, 40, req.ion_mode, req.instrument)
+                    inp = SimulationInput(md, col_dict, mp_dict, grad, 0.4, 40, req.ion_mode)
                     rts[met_id] = ce.predict_rt(inp).rt_min
             req = MRMRequest(metabolite_ids=req.metabolite_ids, ion_mode=req.ion_mode,
                              instrument=req.instrument, predicted_rts=rts, rt_window_min=req.rt_window_min)
@@ -610,31 +610,13 @@ def ml_gradient_optimize(req: GradientOptimizeMLRequest, db: Session = Depends(g
         max_time=req.max_time_min,
     )
 
-    # Format output for frontend
-    output = []
-    for i, r in enumerate(results):
-        output.append({
-            "rank": i + 1,
-            "label": r["label"],
-            "gradient": r["gradient"],
-            "total_score": r["score"]["total"],
-            "predicted_resolution": r["score"]["min_rs"],
-            "peak_capacity": r["score"]["peak_capacity"],
-            "run_time_min": r["run_time_min"],
-            "n_coelutions_critical": r["score"]["n_critical"],
-            "n_baseline_resolved": r["score"].get("n_baseline_resolved", 0),
-            "b_optimal_fraction": r["score"].get("b_optimal_fraction", 0),
-            "optimization_notes": r["label"] + f" — Score {r['score']['total']*100:.0f}%, Rs_min={r['score']['min_rs']:.2f}, Pc={r['score']['peak_capacity']:.0f}",
-            "scientific_basis": f"LSS theory (Snyder 2007): %B {r['gradient'][0]['pct_b']}→{r['gradient'][-2]['pct_b']} over {r['tg_theory']:.1f} min, S_avg={r['S_avg']}, b≈0.35 optimal",
-            "lss_params": {"phi_start": r["phi_start"], "phi_end": r["phi_end"], "tg_theory": r["tg_theory"], "S_avg": r["S_avg"]},
-        })
-
+    # New optimizer already returns correctly formatted dicts
     return {
         "column_chemistry": req.column_chemistry,
         "n_metabolites": len(mets),
-        "optimized_gradients": output,
+        "optimized_gradients": results,
         "algorithm": "Linear Solvent Strength (LSS) Theory — Snyder & Dolan 2007",
-        "theory_reference": "Snyder LR, Dolan JW (2007) High-Performance Gradient Elution, Wiley. Van Deemter (1956) Chem Eng Sci. Purnell (1960) J Chem Soc. Dolan et al. (1979) J Chromatogr.",
+        "theory_reference": "Snyder & Dolan 2007; Van Deemter 1956; Purnell 1960; Buszewski & Noga 2012",
     }
 
 @router_ml.post("/buffer-optimize")
