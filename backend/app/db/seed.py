@@ -6,11 +6,9 @@ Neurotransmitters, Bile Acids, Eicosanoids, Acyl-CoAs, and more.
 """
 from app.db.database import SessionLocal
 from app.models.models import Metabolite, Column_, MobilePhase, AtomMapping, User
-from passlib.context import CryptContext
 import logging
 
 logger = logging.getLogger(__name__)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 METABOLITES = [
@@ -199,7 +197,7 @@ def seed_database():
 
         demo_user = User(
             email="demo@vlcms.io",
-            hashed_password=pwd_context.hash("demo1234"),
+            hashed_password="demo_hash_1234",
             full_name="Demo Researcher",
             role="researcher",
         )
